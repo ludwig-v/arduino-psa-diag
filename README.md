@@ -4,7 +4,7 @@ Arduino sketch to send diagnostic frames to PSA cars
 ## How to use
 The serial console is used to send raw diagnostic frames, start it using 115200 baud rate
 
-## Choose CAN-BUS IDs pair
+## Choose ECU
 You have to choose the ECU you want to communicate with by inputing its diagnostic frame IDs in hexadecimal:
 
     >CAN_EMIT_ID:CAN_RECV_ID
