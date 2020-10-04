@@ -1,16 +1,16 @@
 # ECU IDs list
 
-| ECU Family | Description | IDs command |
+| ECU Family | ECUs (Non-Exhaustive list) | IDs command |
 | - | - | - |
 | ABRASR |  | >6AD:68D |
-| AFFICHEUR |  | >765:665 |
+| AFFICHEUR | EMF | >765:665 |
 | AFFICHEUR_LIN |  | >736:716 |
 | AIRBAG |  | >744:644 |
-| AUTORADIO |  | >760:660 |
+| AUTORADIO | RD45 | >760:660 |
 | AVE |  | >74F:64F |
 | BECB |  | >6C4:604 |
 | BMF |  | >752:652 |
-| BOITEVIT |  | >6A9:689 |
+| BOITEVIT | EAT8 | >6A9:689 |
 | BSR |  | >76C:66C |
 | CDE |  | >771:671 |
 | CLIM |  | >76D:66D |
@@ -23,14 +23,14 @@
 | DMTC |  | >6BC:69C |
 | FMUX |  | >77B:67B |
 | HDC |  | >742:642 |
-| INJ |  | >6A8:688 |
+| INJ | DCM_3.5, ME749, MME6KP | >6A8:688 |
 | MDS |  | >77C:67C |
 | PADDITIVATION |  | >6C1:601 |
 | RUMBLE |  | >708:728 |
 | SIRENE |  | >6E5:625 |
-| TELEMAT |  | >764:664 |
+| TELEMAT | SMEG, NAC, AIO, RCC, RNEG | >764:664 |
 | TNB |  | >730:710 |
-| AFFICHEUR_LVDS_BD |  | >743:643 |
+| AFFICHEUR_LVDS_BD | DGT7C, DGT7CFF | >743:643 |
 | ALARME |  | >6E6:626 |
 | ARTIV |  | >6B6:696 |
 | ASRPLUS |  | >6BD:69D |
@@ -60,7 +60,7 @@
 | KML |  | >773:673 |
 | RHF |  | >746:646 |
 | AVAS |  | >5B0:5AF |
-| AMPLHIFI |  | >77D:67D |
+| AMPLHIFI | AMPLI | >77D:67D |
 | BML |  | >741:641 |
 | BNC_AVD |  | >733:713 |
 | BNC_AVG |  | >733:713 |
@@ -71,8 +71,8 @@
 | PROJ_R |  | >5B7:577 |
 | VTH_LVDS_BD |  | >738:718 |
 | CONV_PUIS |  | >6BA:69A |
-| BMF_UDS_PSA |  | >752:652 |
-| BMF_CAN_PSA |  | >752:652 |
+| BMF_UDS_PSA | BSI_2010, BSI_2010_EV | >752:652 |
+| BMF_CAN_PSA | BSI, BSI_EV | >752:652 |
 | BMF_CAN_PSA_KILO |  | >752:652 |
 | BMF_K_PSA |  | >752:652 |
 | BMF_K_PSA_KILO |  | >752:652 |
