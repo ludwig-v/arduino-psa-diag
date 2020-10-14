@@ -290,7 +290,7 @@ void loop() {
     int len = canMsgRcv.can_dlc;
 
     if (id == CAN_RECV_ID) {
-      if (len == 3 && canMsgRcv.data[0] == 0x30 && canMsgRcv.data[1] == 0x00 && canMsgRcv.data[2] == 0x14) { // Acknowledgement Write
+      if (len == 3 && canMsgRcv.data[0] == 0x30 && canMsgRcv.data[1] == 0x00) { // Acknowledgement Write
         sendAdditionalDiagFrames(receiveDiagFrameData, 12);
       } else if (len > 2 && canMsgRcv.data[0] == 0x10) { // Acknowledgement Read
         receiveDiagFrameSize = canMsgRcv.data[1];
