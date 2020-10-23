@@ -193,3 +193,21 @@ Every line of calibration files has this form:
 | **DATA** |   |
 | **CHECKSUM** | *CRC-16/X-25*(DATA) with this order CRC[1] CRC[0] |
 | **CHECKSUM2** | *CRC-8/2s_complement*(ADDRESS+ZONE+DATA+CHECKSUM) - 1 |
+
+## Dump Mode
+
+This sketch also provides a way to dump Diagbox frames (read & write) very easily, it is merging split CAN-BUS frames together to have a clean and human readable output. Just enable it this way:
+
+    bool Dump = true;
+
+### Example
+You can build yourself that kind of cable using an OBD2 Extender cable to use both the Arduino and PSA Interface:
+![Dump cable](https://i.imgur.com/UVQRsyr.png)
+#### PINOUT
+
+| PIN | Description |
+|--|--|
+| 3 | CAN-BUS Diagnostic High |
+| 8 | CAN-BUS Diagnostic Low |
+
+![OBD2 PINOUT](https://i.imgur.com/sWJF8gg.png)
