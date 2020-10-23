@@ -14,12 +14,12 @@
 | BSR |  | >76C:66C |
 | CDE |  | >771:671 |
 | CLIM |  | >76D:66D |
-| COMBINE |  | >75F:65F |
+| COMBINE | CIROCCO | >75F:65F |
 | CPL |  | >730:710 |
 | CRT_UDS_CAN |  | >74C:64C |
 | CSR |  | >6C8:628 |
 | CVM |  | >74A:64A |
-| DIRECTN |  | >6B5:695 |
+| DIRECTN | DAE | >6B5:695 |
 | DMTC |  | >6BC:69C |
 | FMUX |  | >77B:67B |
 | HDC |  | >742:642 |
