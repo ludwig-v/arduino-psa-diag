@@ -27,6 +27,7 @@ MCP2515 CAN0(CS_PIN_CAN0); // CAN-BUS Shield
 
 // My variables
 bool SerialEnabled = true;
+bool Dump = true; // Dump Diagbox frames
 
 // CAN-BUS Messages
 struct can_frame canMsgRcv;
@@ -42,8 +43,8 @@ void setup() {
   }
 }
 
-int CAN_EMIT_ID = 0;
-int CAN_RECV_ID = 0;
+int CAN_EMIT_ID = hex_atoi("752"); // BSI
+int CAN_RECV_ID = hex_atoi("652"); // BSI
 
 int additionalFrameID;
 int additionalFrameSize;
@@ -51,6 +52,8 @@ int additionalFrameSize;
 char receiveDiagFrameData[512];
 int receiveDiagFrameSize;
 int receiveDiagDataPos = 0;
+
+bool waitingReplySerialCMD = false;
 
 int hex_atoi(char * str) {
   int len = strlen(str);
@@ -119,6 +122,9 @@ void receiveAdditionalDiagFrame(can_frame frame) {
   }
 
   if (strlen(receiveDiagFrameData) == (receiveDiagFrameSize * 2)) { // Data complete
+    snprintf(tmp, 4, "%02X", CAN_RECV_ID);
+      Serial.print(tmp);
+      Serial.print(":");
     Serial.println(receiveDiagFrameData);
   }
 }
@@ -270,6 +276,7 @@ void recvWithTimeout() {
         }
       } else {
         sendDiagFrame(receiveDiagFrameData);
+        waitingReplySerialCMD = true;
       }
       pos = 0;
     } else {
@@ -289,33 +296,69 @@ void loop() {
     int id = canMsgRcv.can_id;
     int len = canMsgRcv.can_dlc;
 
-    if (id == CAN_RECV_ID) {
-      if (len == 3 && canMsgRcv.data[0] == 0x30 && canMsgRcv.data[1] == 0x00) { // Acknowledgement Write
+    if (Dump) {
+      if (canMsgRcv.data[1] == 0x7E || canMsgRcv.data[1] == 0x3E) {
+        // Diag session keep-alives (useless, do not print)
+      } else if (waitingReplySerialCMD && len == 3 && canMsgRcv.data[0] == 0x30 && canMsgRcv.data[1] == 0x00) { // Acknowledgement Write
         sendAdditionalDiagFrames(receiveDiagFrameData, 12);
+
+        waitingReplySerialCMD = false;
       } else if (len > 2 && canMsgRcv.data[0] == 0x10) { // Acknowledgement Read
         receiveDiagFrameSize = canMsgRcv.data[1];
+        if (waitingReplySerialCMD) {
+          struct can_frame diagFrame;
+          diagFrame.data[0] = 0x30;
+          diagFrame.data[1] = 0x00;
+          diagFrame.data[2] = 0x05;
+          diagFrame.can_id = CAN_EMIT_ID;
+          diagFrame.can_dlc = 3;
+          CAN0.sendMessage( & diagFrame);
 
-        struct can_frame diagFrame;
-        diagFrame.data[0] = 0x30;
-        diagFrame.data[1] = 0x00;
-        diagFrame.data[2] = 0x05;
-        diagFrame.can_id = CAN_EMIT_ID;
-        diagFrame.can_dlc = 3;
-        CAN0.sendMessage( & diagFrame);
-
+          waitingReplySerialCMD = false;
+        }
         receiveDiagMultiFrame(canMsgRcv);
       } else if (len > 1 && canMsgRcv.data[0] >= 0x20) {
         receiveAdditionalDiagFrame(canMsgRcv);
       } else {
-        char tmp[3];
+        char tmp[4];
+        snprintf(tmp, 4, "%02X", id);
+        Serial.print(tmp);
+        Serial.print(":");
         for (int i = 1; i < len; i++) { // Strip first byte = Data length
           snprintf(tmp, 3, "%02X", canMsgRcv.data[i]);
           Serial.print(tmp);
         }
         Serial.println();
       }
-    }
+    } else {
+      if (id == CAN_RECV_ID) {
+        if (len == 3 && canMsgRcv.data[0] == 0x30 && canMsgRcv.data[1] == 0x00) { // Acknowledgement Write
+          sendAdditionalDiagFrames(receiveDiagFrameData, 12);
+        } else if (len > 2 && canMsgRcv.data[0] == 0x10) { // Acknowledgement Read
+          receiveDiagFrameSize = canMsgRcv.data[1];
 
-    CAN0.sendMessage( & canMsgRcv);
+          struct can_frame diagFrame;
+          diagFrame.data[0] = 0x30;
+          diagFrame.data[1] = 0x00;
+          diagFrame.data[2] = 0x05;
+          diagFrame.can_id = CAN_EMIT_ID;
+          diagFrame.can_dlc = 3;
+          CAN0.sendMessage( & diagFrame);
+
+          receiveDiagMultiFrame(canMsgRcv);
+        } else if (len > 1 && canMsgRcv.data[0] >= 0x20) {
+          receiveAdditionalDiagFrame(canMsgRcv);
+        } else {
+          char tmp[3];
+          for (int i = 1; i < len; i++) { // Strip first byte = Data length
+            snprintf(tmp, 3, "%02X", canMsgRcv.data[i]);
+            Serial.print(tmp);
+          }
+          Serial.println();
+        }
+      }
+
+      CAN0.sendMessage( & canMsgRcv);
+    }
   }
 }
