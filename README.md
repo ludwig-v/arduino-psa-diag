@@ -11,7 +11,16 @@ You have to choose the ECU you want to communicate with by inputing its diagnost
 Telematic unit access example:
 
     >764:664
-Check out ECU_LIST.md inside the repo for other ECUs IDs pair
+Check out [ECU_LIST.md](https://github.com/ludwig-v/arduino-psa-diag/blob/master/ECU_LIST.md) inside the repo for other ECUs IDs pair
+
+## Easy Unlock
+Once you are on the chosen ECU you can unlock writing easily using this shortcut:
+
+    :UNLOCK_KEY:UNLOCK_SERVICE
+NAC Telematic unit unlock example:
+
+    :D91C:03
+Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/main/ECU_KEYS.md) for other ECUs keys
 
 ## UDS Commands
 
