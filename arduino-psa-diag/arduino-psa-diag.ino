@@ -26,8 +26,7 @@ MCP2515 CAN0(CS_PIN_CAN0); // CAN-BUS Shield
 ////////////////////
 
 // My variables
-bool SerialEnabled = true;
-bool Dump = true; // Dump Diagbox frames
+bool Dump = false; // Passive dump mode, dump Diagbox frames
 
 // CAN-BUS Messages
 struct can_frame canMsgRcv;
@@ -43,8 +42,8 @@ void setup() {
   }
 }
 
-int CAN_EMIT_ID = hex_atoi("752"); // BSI
-int CAN_RECV_ID = hex_atoi("652"); // BSI
+int CAN_EMIT_ID = 0x752; // BSI
+int CAN_RECV_ID = 0x652; // BSI
 
 int additionalFrameID;
 int additionalFrameSize;
@@ -54,18 +53,27 @@ int receiveDiagFrameSize;
 int receiveDiagDataPos = 0;
 
 bool waitingReplySerialCMD = false;
+bool waitingUnlock = false;
+unsigned short UnlockKey = 0x0000;
+byte UnlockService = 0x00;
+char * UnlockCMD = (char * ) malloc(5);
 
-int hex_atoi(char * str) {
-  int len = strlen(str);
-  int res = 0;
-  for (int i = 0; str[i] != '\0'; ++i) {
-    if (str[i + 1] == '\0') {
-      res += ((str[i] <= '9') ? str[i] - '0' : (str[i] & 0x7) + 9);
-    } else {
-      res += ((str[i] <= '9') ? str[i] - '0' : (str[i] & 0x7) + 9) << int_pow(2, (len - i));
-    }
-  }
-  return res;
+/* https://github.com/ludwig-v/psa-seedkey-algorithm */
+long transform(byte data_msb, byte data_lsb, byte sec[]) {
+  long data = (data_msb << 8) | data_lsb;
+  long result = ((data % sec[0]) * sec[2]) - ((data / sec[0]) * sec[1]);
+  if (result < 0)
+    result += (sec[0] * sec[2]) + sec[1];
+  return result;
+}
+
+unsigned long compute_response(unsigned short pin, unsigned long chg) {
+  byte sec_1[3] = {0xB2,0x3F,0xAA};
+  byte sec_2[3] = {0xB1,0x02,0xAB};
+
+  long res_msb = transform((pin >> 8), (pin & 0xFF), sec_1) | transform(((chg >> 24) & 0xFF), (chg & 0xFF), sec_2);
+  long res_lsb = transform(((chg >> 16) & 0xFF), ((chg >> 8) & 0xFF), sec_1) | transform((res_msb >> 8), (res_msb & 0xFF), sec_2);
+  return (res_msb << 16) | res_lsb;
 }
 
 int int_pow(int base, int exp) {
@@ -123,8 +131,8 @@ void receiveAdditionalDiagFrame(can_frame frame) {
 
   if (strlen(receiveDiagFrameData) == (receiveDiagFrameSize * 2)) { // Data complete
     snprintf(tmp, 4, "%02X", CAN_RECV_ID);
-      Serial.print(tmp);
-      Serial.print(":");
+    Serial.print(tmp);
+    Serial.print(":");
     Serial.println(receiveDiagFrameData);
   }
 }
@@ -267,13 +275,35 @@ void recvWithTimeout() {
         char * ids = strtok(receiveDiagFrameData + 1, ":");
         while (ids != NULL) {
           if (pos == 0) {
-            CAN_EMIT_ID = hex_atoi(ids);
+            CAN_EMIT_ID = strtoul(ids, NULL, 16);
           } else if (pos == 1) {
-            CAN_RECV_ID = hex_atoi(ids);
+            CAN_RECV_ID = strtoul(ids, NULL, 16);
           }
           pos++;
           ids = strtok(NULL, ":");
         }
+      } else if (receiveDiagFrameData[0] == ':') { // Unlock with key
+        pos = 0;
+        char * ids = strtok(receiveDiagFrameData + 1, ":");
+        while (ids != NULL) {
+          if (pos == 0) {
+            UnlockKey = strtoul(ids, NULL, 16);
+          } else if (pos == 1) {
+            UnlockService = strtoul(ids, NULL, 16);
+          }
+          pos++;
+          ids = strtok(NULL, ":");
+        }
+        char tmp[3];
+        snprintf(tmp, 3, "%02X", UnlockService);
+
+        strcpy(UnlockCMD, "27");
+        strcat(UnlockCMD, tmp);
+
+        char diagCMD[5] = "1003";
+        sendDiagFrame(diagCMD);
+
+        waitingUnlock = true;
       } else {
         sendDiagFrame(receiveDiagFrameData);
         waitingReplySerialCMD = true;
@@ -359,6 +389,44 @@ void loop() {
       }
 
       CAN0.sendMessage( & canMsgRcv);
+    }
+
+    if (canMsgRcv.data[1] == 0x7F) { // Error
+      waitingUnlock = false;
+      waitingReplySerialCMD = false;
+    } else if (waitingUnlock && canMsgRcv.data[1] == 0x50 && canMsgRcv.data[2] == 0x03) {
+      sendDiagFrame(UnlockCMD);
+    }
+
+    if (waitingUnlock && canMsgRcv.data[1] == 0x67 && canMsgRcv.data[2] == UnlockService) {
+      char tmp[4];
+      char * SeedKey = (char * ) malloc(9);
+      char * UnlockCMD = (char * ) malloc(16);
+
+      snprintf(tmp, 3, "%02X", canMsgRcv.data[3]);
+      strcpy(SeedKey, tmp);
+      snprintf(tmp, 3, "%02X", canMsgRcv.data[4]);
+      strcat(SeedKey, tmp);
+      snprintf(tmp, 3, "%02X", canMsgRcv.data[5]);
+      strcat(SeedKey, tmp);
+      snprintf(tmp, 3, "%02X", canMsgRcv.data[6]);
+      strcat(SeedKey, tmp);
+      unsigned long Key = compute_response(UnlockKey, strtoul(SeedKey, NULL, 16));
+      snprintf(SeedKey, 9, "%08lX", Key);
+
+      strcpy(UnlockCMD, "27");
+      snprintf(tmp, 3, "%02X", (UnlockService + 1)); // Answer
+      strcat(UnlockCMD, tmp);
+      strcat(UnlockCMD, SeedKey);
+
+      snprintf(tmp, 4, "%02X", CAN_EMIT_ID);
+      Serial.print(tmp);
+      Serial.print(":");
+      Serial.println(UnlockCMD);
+
+      sendDiagFrame(UnlockCMD);
+
+      waitingUnlock = false;
     }
   }
 }
