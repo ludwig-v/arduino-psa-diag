@@ -130,9 +130,11 @@ void receiveAdditionalDiagFrame(can_frame frame) {
   }
 
   if (strlen(receiveDiagFrameData) == (receiveDiagFrameSize * 2)) { // Data complete
-    snprintf(tmp, 4, "%02X", CAN_RECV_ID);
-    Serial.print(tmp);
-    Serial.print(":");
+    if (Dump) {
+      snprintf(tmp, 4, "%02X", CAN_RECV_ID);
+      Serial.print(tmp);
+      Serial.print(":");
+    }
     Serial.println(receiveDiagFrameData);
   }
 }
