@@ -16,10 +16,10 @@ Check out [ECU_LIST.md](https://github.com/ludwig-v/arduino-psa-diag/blob/master
 ## Easy Unlock
 Once you are on the chosen ECU you can unlock writing easily using this shortcut:
 
-    :UNLOCK_KEY:UNLOCK_SERVICE
+    :UNLOCK_KEY:UNLOCK_SERVICE:DIAG_SESSION_ID
 NAC Telematic unit unlock example:
 
-    :D91C:03
+    :D91C:03:03
 Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/main/ECU_KEYS.md) for other ECUs keys
 
 ## UDS Commands
@@ -205,9 +205,17 @@ Every line of calibration files has this form:
 
 ## Dump Mode
 
-This sketch also provides a way to dump Diagbox frames (read & write) very easily, it is merging split CAN-BUS frames together to have a clean and human readable output. Just enable it this way:
+This sketch also provides a way to dump Diagbox frames (read & write) very easily, it is merging split CAN-BUS frames together to have a clean and "human readable" output. Just enable it this way in the source code:
 
     bool Dump = true;
+	
+You can also use the serial console typing:
+
+    X
+	
+To revert into normal mode:
+
+    N
 
 ### Example
 You can build yourself that kind of cable using an OBD2 Extender cable to use both the Arduino and PSA Interface:

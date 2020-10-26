@@ -32,6 +32,25 @@ bool Dump = false; // Passive dump mode, dump Diagbox frames
 struct can_frame canMsgRcv;
 char tmp[4];
 
+int CAN_EMIT_ID = 0x752; // BSI
+int CAN_RECV_ID = 0x652; // BSI
+
+int additionalFrameID;
+int additionalFrameSize;
+byte DiagSess = 0x03;
+
+char receiveDiagFrameData[512];
+int receiveDiagFrameSize;
+int receiveDiagDataPos = 0;
+
+bool waitingReplySerialCMD = false;
+static unsigned long lastCMDSent = 0;
+bool waitingUnlock = false;
+unsigned short UnlockKey = 0x0000;
+byte UnlockService = 0x00;
+char * UnlockCMD = (char * ) malloc(5);
+char * SketchVersion = (char * ) malloc(4);
+
 void setup() {
   Serial.begin(SERIAL_SPEED);
 
@@ -40,23 +59,9 @@ void setup() {
   while (CAN0.setNormalMode() != MCP2515::ERROR_OK) {
     delay(100);
   }
+
+  strcpy(SketchVersion, "1.0");
 }
-
-int CAN_EMIT_ID = 0x752; // BSI
-int CAN_RECV_ID = 0x652; // BSI
-
-int additionalFrameID;
-int additionalFrameSize;
-
-char receiveDiagFrameData[512];
-int receiveDiagFrameSize;
-int receiveDiagDataPos = 0;
-
-bool waitingReplySerialCMD = false;
-bool waitingUnlock = false;
-unsigned short UnlockKey = 0x0000;
-byte UnlockService = 0x00;
-char * UnlockCMD = (char * ) malloc(5);
 
 /* https://github.com/ludwig-v/psa-seedkey-algorithm */
 long transform(byte data_msb, byte data_lsb, byte sec[]) {
@@ -142,7 +147,7 @@ void receiveAdditionalDiagFrame(can_frame frame) {
 void sendAdditionalDiagFrames(char * data, int pos) {
   int i = 0;
   int frameLen = 0;
-  int tmpFrame[8] = {0,0,0,0,0,0,0,0};
+  byte tmpFrame[8] = {0,0,0,0,0,0,0,0};
   struct can_frame diagFrame;
   int dataSize = strlen(data);
 
@@ -201,7 +206,7 @@ void sendAdditionalDiagFrames(char * data, int pos) {
 void sendDiagFrame(char * data) {
   int i = 0;
   int frameLen = 0;
-  int tmpFrame[8] = {0,0,0,0,0,0,0,0};
+  byte tmpFrame[8] = {0,0,0,0,0,0,0,0};
   struct can_frame diagFrame;
 
   for (i = 0; i < strlen(data) && i < 16; i += 2) {
@@ -234,10 +239,8 @@ void sendDiagFrame(char * data) {
     additionalFrameSize = strlen(data) - i;
     additionalFrameID = 0x21;
 
-    // Acknowledgement Read : 0x30 0x00 0x05
-    // Acknowledgement Write : 0x30 0x00 0x0A
-
   } else {
+
     diagFrame.data[0] = frameLen;
     diagFrame.data[1] = tmpFrame[0];
     diagFrame.data[2] = tmpFrame[1];
@@ -292,6 +295,8 @@ void recvWithTimeout() {
             UnlockKey = strtoul(ids, NULL, 16);
           } else if (pos == 1) {
             UnlockService = strtoul(ids, NULL, 16);
+          } else if (pos == 2) {
+            DiagSess = strtoul(ids, NULL, 16);
           }
           pos++;
           ids = strtok(NULL, ":");
@@ -302,13 +307,31 @@ void recvWithTimeout() {
         strcpy(UnlockCMD, "27");
         strcat(UnlockCMD, tmp);
 
-        char diagCMD[5] = "1003";
+        char diagCMD[5] = "10";
+        snprintf(tmp, 3, "%02X", DiagSess);
+        strcat(diagCMD, tmp);
         sendDiagFrame(diagCMD);
 
         waitingUnlock = true;
+      } else if (receiveDiagFrameData[0] == 'V') {
+        Serial.println(SketchVersion);
+      } else if (receiveDiagFrameData[0] == 'N') {
+        Dump = false;
+        Serial.println("Normal mode");
+      } else if (receiveDiagFrameData[0] == 'X') {
+        Dump = true;
+        Serial.println("Dump mode");
+      } else if (receiveDiagFrameData[0] == '?') {
+        char tmp[4];
+        snprintf(tmp, 4, "%02X", CAN_EMIT_ID);
+        Serial.print(tmp);
+        Serial.print(":");
+        snprintf(tmp, 4, "%02X", CAN_RECV_ID);
+        Serial.println(tmp);
       } else {
         sendDiagFrame(receiveDiagFrameData);
         waitingReplySerialCMD = true;
+        lastCMDSent = millis();
       }
       pos = 0;
     } else {
@@ -335,6 +358,7 @@ void loop() {
         sendAdditionalDiagFrames(receiveDiagFrameData, 12);
 
         waitingReplySerialCMD = false;
+        lastCMDSent = 0;
       } else if (len > 2 && canMsgRcv.data[0] == 0x10) { // Acknowledgement Read
         receiveDiagFrameSize = canMsgRcv.data[1];
         if (waitingReplySerialCMD) {
@@ -347,6 +371,7 @@ void loop() {
           CAN0.sendMessage( & diagFrame);
 
           waitingReplySerialCMD = false;
+          lastCMDSent = 0;
         }
         receiveDiagMultiFrame(canMsgRcv);
       } else if (len > 1 && canMsgRcv.data[0] >= 0x20) {
@@ -364,19 +389,25 @@ void loop() {
       }
     } else {
       if (id == CAN_RECV_ID) {
-        if (len == 3 && canMsgRcv.data[0] == 0x30 && canMsgRcv.data[1] == 0x00) { // Acknowledgement Write
+        if (waitingReplySerialCMD && len == 3 && canMsgRcv.data[0] == 0x30 && canMsgRcv.data[1] == 0x00) { // Acknowledgement Write
           sendAdditionalDiagFrames(receiveDiagFrameData, 12);
+
+          waitingReplySerialCMD = false;
+          lastCMDSent = 0;
         } else if (len > 2 && canMsgRcv.data[0] == 0x10) { // Acknowledgement Read
           receiveDiagFrameSize = canMsgRcv.data[1];
+          if (waitingReplySerialCMD) {
+            struct can_frame diagFrame;
+            diagFrame.data[0] = 0x30;
+            diagFrame.data[1] = 0x00;
+            diagFrame.data[2] = 0x05;
+            diagFrame.can_id = CAN_EMIT_ID;
+            diagFrame.can_dlc = 3;
+            CAN0.sendMessage( & diagFrame);
 
-          struct can_frame diagFrame;
-          diagFrame.data[0] = 0x30;
-          diagFrame.data[1] = 0x00;
-          diagFrame.data[2] = 0x05;
-          diagFrame.can_id = CAN_EMIT_ID;
-          diagFrame.can_dlc = 3;
-          CAN0.sendMessage( & diagFrame);
-
+            waitingReplySerialCMD = false;
+            lastCMDSent = 0;
+          }
           receiveDiagMultiFrame(canMsgRcv);
         } else if (len > 1 && canMsgRcv.data[0] >= 0x20) {
           receiveAdditionalDiagFrame(canMsgRcv);
@@ -389,14 +420,13 @@ void loop() {
           Serial.println();
         }
       }
-
-      CAN0.sendMessage( & canMsgRcv);
     }
 
-    if (canMsgRcv.data[1] == 0x7F) { // Error
+    if (canMsgRcv.data[1] == 0x7F || (lastCMDSent > 0 && millis() - lastCMDSent >= 1000)) { // Error / No answer
       waitingUnlock = false;
       waitingReplySerialCMD = false;
-    } else if (waitingUnlock && canMsgRcv.data[1] == 0x50 && canMsgRcv.data[2] == 0x03) {
+      lastCMDSent = 0;
+    } else if (waitingUnlock && canMsgRcv.data[1] == 0x50 && canMsgRcv.data[2] == DiagSess) {
       sendDiagFrame(UnlockCMD);
     }
 
@@ -421,10 +451,12 @@ void loop() {
       strcat(UnlockCMD, tmp);
       strcat(UnlockCMD, SeedKey);
 
-      snprintf(tmp, 4, "%02X", CAN_EMIT_ID);
-      Serial.print(tmp);
-      Serial.print(":");
-      Serial.println(UnlockCMD);
+      if (Dump) {
+        snprintf(tmp, 4, "%02X", CAN_EMIT_ID);
+        Serial.print(tmp);
+        Serial.print(":");
+        Serial.println(UnlockCMD);
+      }
 
       sendDiagFrame(UnlockCMD);
 
