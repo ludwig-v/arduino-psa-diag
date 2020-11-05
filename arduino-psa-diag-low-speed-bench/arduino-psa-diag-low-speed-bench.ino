@@ -368,7 +368,7 @@ void loop() {
     recvWithTimeout();
   }
 
-  if (millis() - lastBSIemul >= 50) { // Every 50ms, minimal frames required to power up a telematic unit
+  if (millis() - lastBSIemul >= 100) { // Every 100ms, minimal frames required to power up a telematic unit
     struct can_frame diagFrame;
 
     diagFrame.data[0] = 0x80;
