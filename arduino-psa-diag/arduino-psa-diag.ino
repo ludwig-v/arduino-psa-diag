@@ -411,9 +411,9 @@ void loop() {
     } else {
       if (id == CAN_RECV_ID) {
         if (waitingReplySerialCMD && len == 3 && canMsgRcv.data[0] == 0x30 && canMsgRcv.data[1] == 0x00) { // Acknowledgement Write
-		  framesDelay = canMsgRcv.data[2];
+          framesDelay = canMsgRcv.data[2];
 
-		  sendAdditionalDiagFrames(receiveDiagFrameData, 12);
+          sendAdditionalDiagFrames(receiveDiagFrameData, 12);
 
           waitingReplySerialCMD = false;
           lastCMDSent = 0;
