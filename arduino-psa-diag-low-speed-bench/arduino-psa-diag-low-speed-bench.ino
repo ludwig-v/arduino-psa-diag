@@ -68,6 +68,7 @@ unsigned short UnlockKey = 0x0000;
 byte UnlockService = 0x00;
 char * UnlockCMD = (char * ) malloc(5);
 char * SketchVersion = (char * ) malloc(4);
+byte framesDelay = 0;
 
 static unsigned long lastBSIemul = 0;
 
@@ -198,7 +199,7 @@ void sendAdditionalDiagFrames(char * data, int pos) {
       diagFrame.can_dlc = frameLen;
       CAN0.sendMessage( & diagFrame);
 
-      delay(10);
+      delay(framesDelay);
 
       frameLen = 0;
     } else if ((i + 2) == dataSize) {
@@ -414,6 +415,8 @@ void loop() {
       if (canMsgRcv.data[1] == 0x7E || canMsgRcv.data[1] == 0x3E) {
         // Diag session keep-alives (useless, do not print)
       } else if (waitingReplySerialCMD && len == 3 && canMsgRcv.data[0] == 0x30 && canMsgRcv.data[1] == 0x00) { // Acknowledgement Write
+        framesDelay = canMsgRcv.data[2];
+
         sendAdditionalDiagFrames(receiveDiagFrameData, 12);
 
         waitingReplySerialCMD = false;
@@ -449,6 +452,8 @@ void loop() {
     } else {
       if (id == CAN_RECV_ID) {
         if (waitingReplySerialCMD && len == 3 && canMsgRcv.data[0] == 0x30 && canMsgRcv.data[1] == 0x00) { // Acknowledgement Write
+          framesDelay = canMsgRcv.data[2];
+
           sendAdditionalDiagFrames(receiveDiagFrameData, 12);
 
           waitingReplySerialCMD = false;
