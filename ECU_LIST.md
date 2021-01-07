@@ -14,7 +14,7 @@
 | BSR |  | >76C:66C |
 | CDE |  | >771:671 |
 | CLIM |  | >76D:66D |
-| COMBINE | CIROCCO | >75F:65F |
+| COMBINE | CIROCCO, COMBINE_UDS, COMBINE_UDS_EV | >75F:65F |
 | CPL |  | >730:710 |
 | CRT_UDS_CAN |  | >74C:64C |
 | CSR |  | >6C8:628 |
