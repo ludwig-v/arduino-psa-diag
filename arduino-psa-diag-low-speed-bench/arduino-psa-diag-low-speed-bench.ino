@@ -137,6 +137,7 @@ void receiveAdditionalDiagFrame(can_frame frame) {
   int i = 0;
   char tmp[4];
   int frameOrder = 0;
+  int framePos = 0;
 
   if (frame.data[0] == 0x20) {
     if (receiveDiagDataPos == 0) {
@@ -150,12 +151,17 @@ void receiveAdditionalDiagFrame(can_frame frame) {
   for (i = 1; i < frame.can_dlc; i++) {
     snprintf(tmp, 3, "%02X", frame.data[i]);
 
+    framePos = (6 * 2) + (frameOrder * 7 * 2) + ((i - 1) * 2) + 1;
+
+    if (framePos >= 512) // Avoid overflow
+      break;
+
     // 6 bytes already received + 7 bytes max per frame
-    receiveDiagFrameData[(6 * 2) + (frameOrder * 7 * 2) + ((i - 1) * 2)] = tmp[0];
-    receiveDiagFrameData[(6 * 2) + (frameOrder * 7 * 2) + ((i - 1) * 2) + 1] = tmp[1];
+    receiveDiagFrameData[framePos - 1] = tmp[0];
+    receiveDiagFrameData[framePos] = tmp[1];
   }
 
-  if (strlen(receiveDiagFrameData) == (receiveDiagFrameSize * 2)) { // Data complete
+  if (strlen(receiveDiagFrameData) == (receiveDiagFrameSize * 2) || framePos >= 512) { // Data complete or overflow
     if (Dump) {
       snprintf(tmp, 4, "%02X", CAN_RECV_ID);
       Serial.print(tmp);
@@ -364,10 +370,6 @@ void recvWithTimeout() {
 }
 
 void loop() {
-  if (Serial.available() > 0) {
-    recvWithTimeout();
-  }
-
   if (millis() - lastBSIemul >= 100) { // Every 100ms, minimal frames required to power up a telematic unit
     struct can_frame diagFrame;
 
@@ -407,12 +409,16 @@ void loop() {
     lastBSIemul = millis();
   }
 
+  if (Serial.available() > 0) {
+    recvWithTimeout();
+  }
+
   if (CAN0.readMessage( & canMsgRcv) == MCP2515::ERROR_OK) {
     int id = canMsgRcv.can_id;
     int len = canMsgRcv.can_dlc;
 
     if (Dump) {
-      if (canMsgRcv.data[1] == 0x7E || canMsgRcv.data[1] == 0x3E) {
+      if (canMsgRcv.data[0] < 0x10 && (canMsgRcv.data[1] == 0x7E || canMsgRcv.data[1] == 0x3E)) {
         // Diag session keep-alives (useless, do not print)
       } else if (waitingReplySerialCMD && len == 3 && canMsgRcv.data[0] == 0x30 && canMsgRcv.data[1] == 0x00) { // Acknowledgement Write
         framesDelay = canMsgRcv.data[2];
@@ -421,13 +427,14 @@ void loop() {
 
         waitingReplySerialCMD = false;
         lastCMDSent = 0;
-      } else if (len > 2 && canMsgRcv.data[0] == 0x10) { // Acknowledgement Read
-        receiveDiagFrameSize = canMsgRcv.data[1];
+      } else if (len > 2 && canMsgRcv.data[0] >= 0x10 && canMsgRcv.data[0] <= 0x15) { // Acknowledgement Read
+        receiveDiagFrameSize = ((canMsgRcv.data[0] - 0x10) * 255) + canMsgRcv.data[1];
+
         if (waitingReplySerialCMD) {
           struct can_frame diagFrame;
           diagFrame.data[0] = 0x30;
           diagFrame.data[1] = 0x00;
-          diagFrame.data[2] = 0x05;
+          diagFrame.data[2] = 0x0A;
           diagFrame.can_id = CAN_EMIT_ID;
           diagFrame.can_dlc = 3;
           CAN0.sendMessage( & diagFrame);
@@ -458,13 +465,14 @@ void loop() {
 
           waitingReplySerialCMD = false;
           lastCMDSent = 0;
-        } else if (len > 2 && canMsgRcv.data[0] == 0x10) { // Acknowledgement Read
-          receiveDiagFrameSize = canMsgRcv.data[1];
+        } else if (len > 2 && canMsgRcv.data[0] >= 0x10 && canMsgRcv.data[0] <= 0x15) { // Acknowledgement Read
+          receiveDiagFrameSize = ((canMsgRcv.data[0] - 0x10) * 255) + canMsgRcv.data[1];
+
           if (waitingReplySerialCMD) {
             struct can_frame diagFrame;
             diagFrame.data[0] = 0x30;
             diagFrame.data[1] = 0x00;
-            diagFrame.data[2] = 0x05;
+            diagFrame.data[2] = 0x0A;
             diagFrame.can_id = CAN_EMIT_ID;
             diagFrame.can_dlc = 3;
             CAN0.sendMessage( & diagFrame);
