@@ -31,8 +31,8 @@ all copies or substantial portions of the Software.
 //  Configuration  //
 /////////////////////
 
-#define SKETCH_VERSION "1.1"
-#define CAN_RCV_BUFFER 32
+#define SKETCH_VERSION "1.2"
+#define CAN_RCV_BUFFER 42
 #define MAX_DATA_LENGTH 512
 #define CS_PIN_CAN0 10
 #define SERIAL_SPEED 115200
@@ -453,7 +453,7 @@ void parseCAN() {
         int len = canMsgRcvBuffer[t].can_dlc;
 
         if (Dump) {
-          if (canMsgRcvBuffer[t].data[1] == 0x7E || canMsgRcvBuffer[t].data[1] == 0x3E) {
+          if (canMsgRcvBuffer[t].data[0] < 0x10 && (canMsgRcvBuffer[t].data[1] == 0x7E || canMsgRcvBuffer[t].data[1] == 0x3E)) {
             // Diag session keep-alives (useless, do not print)
           } else if (waitingReplySerialCMD && len == 3 && canMsgRcvBuffer[t].data[0] == 0x30 && canMsgRcvBuffer[t].data[1] == 0x00) { // Acknowledgement Write
             framesDelay = canMsgRcvBuffer[t].data[2];
