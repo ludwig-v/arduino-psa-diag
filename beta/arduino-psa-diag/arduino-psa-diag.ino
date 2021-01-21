@@ -33,6 +33,7 @@ all copies or substantial portions of the Software.
 
 #define SKETCH_VERSION "1.3"
 #define CAN_RCV_BUFFER 40
+#define CAN_DEFAULT_DELAY 10 // Delay between multiframes
 #define MAX_DATA_LENGTH 512
 #define CS_PIN_CAN0 10
 #define SERIAL_SPEED 115200
@@ -159,7 +160,6 @@ int ahex2int(char a, char b) {
 
 void receiveDiagMultiFrame(can_frame frame) {
   int i = 0;
-  char tmp[4];
 
   multiframeOverflow = false;
   receiveDiagFrameRead = 0;
@@ -175,7 +175,6 @@ void receiveDiagMultiFrame(can_frame frame) {
 
 void receiveAdditionalDiagFrame(can_frame frame) {
   int i = 0;
-  char tmp[4];
   int frameOrder = 0;
   int framePos = 0;
 
@@ -218,8 +217,8 @@ void receiveAdditionalDiagFrame(can_frame frame) {
 
     if (Dump) {
       snprintf(tmp, 4, "%02X", CAN_RECV_ID);
+      tmp[3] = ':';
       Serial.print(tmp);
-      Serial.print(":");
     }
     Serial.println(receiveDiagFrameData);
   }
@@ -397,7 +396,6 @@ void recvWithTimeout() {
           pos++;
           ids = strtok(NULL, ":");
         }
-        char tmp[3];
         snprintf(tmp, 3, "%02X", UnlockService);
 
         strcpy(UnlockCMD, "27");
@@ -420,18 +418,17 @@ void recvWithTimeout() {
         Serial.println("Dump mode");
         readCANThread.setInterval(0); // We have to be ultra fast to flush MCP2515 buffer and not loosing any frame sent without any delay
       } else if (receiveDiagFrameData[0] == '?') {
-        char tmp[4];
         snprintf(tmp, 4, "%02X", CAN_EMIT_ID);
+        tmp[3] = ':';
         Serial.print(tmp);
-        Serial.print(":");
         snprintf(tmp, 4, "%02X", CAN_RECV_ID);
         Serial.println(tmp);
       } else {
-        char tmp[16];
+        char tmpFrame[16];
         for (int i = 0; i < receiveDiagFrameRead && i < 16; i++) {
-          tmp[i] = receiveDiagFrameData[i];
+          tmpFrame[i] = receiveDiagFrameData[i];
         }
-        sendDiagFrame(tmp, receiveDiagFrameRead);
+        sendDiagFrame(tmpFrame, receiveDiagFrameRead);
 
         waitingReplySerialCMD = true;
         lastCMDSent = millis();
@@ -446,12 +443,12 @@ void recvWithTimeout() {
 }
 
 void loop() {
-  if (Serial.available() > 0) {
+  if (!Lock && Serial.available() > 0) {
     readCANThread.setInterval(5);
 
-    noInterrupts();
+    Timer1.stop();
     recvWithTimeout();
-    interrupts();
+    Timer1.start();
 
     if (Dump) {
       readCANThread.setInterval(0); // We have to be ultra fast to flush MCP2515 buffer and not loosing any frame sent without any delay
@@ -486,7 +483,7 @@ void parseCAN() {
               struct can_frame diagFrame;
               diagFrame.data[0] = 0x30;
               diagFrame.data[1] = 0x00;
-              diagFrame.data[2] = 0x14;
+              diagFrame.data[2] = 0x0A;
               diagFrame.can_id = CAN_EMIT_ID;
               diagFrame.can_dlc = 3;
               CAN0.sendMessage( & diagFrame);
@@ -501,10 +498,9 @@ void parseCAN() {
           } else if (len == 3 && canMsgRcvBuffer[t].data[0] == 0x30 && canMsgRcvBuffer[t].data[1] == 0x00) {
             // Ignore in dump mode
           } else {
-            char tmp[4];
             snprintf(tmp, 4, "%02X", id);
+            tmp[3] = ':';
             Serial.print(tmp);
-            Serial.print(":");
             for (int i = 1; i < len; i++) { // Strip first byte = Data length
               snprintf(tmp, 3, "%02X", canMsgRcvBuffer[t].data[i]);
               Serial.print(tmp);
@@ -527,7 +523,7 @@ void parseCAN() {
                 struct can_frame diagFrame;
                 diagFrame.data[0] = 0x30;
                 diagFrame.data[1] = 0x00;
-                diagFrame.data[2] = 0x14;
+                diagFrame.data[2] = 0x0A;
                 diagFrame.can_id = CAN_EMIT_ID;
                 diagFrame.can_dlc = 3;
                 CAN0.sendMessage( & diagFrame);
@@ -540,7 +536,6 @@ void parseCAN() {
               if (!multiframeOverflow)
                 receiveAdditionalDiagFrame(canMsgRcvBuffer[t]);
             } else {
-              char tmp[3];
               for (int i = 1; i < len; i++) { // Strip first byte = Data length
                 snprintf(tmp, 3, "%02X", canMsgRcvBuffer[t].data[i]);
                 Serial.print(tmp);
@@ -550,18 +545,17 @@ void parseCAN() {
           }
         }
 
-        if (canMsgRcvBuffer[t].data[1] == 0x7F || (lastCMDSent > 0 && millis() - lastCMDSent >= 1000)) { // Error / No answer
+        if (canMsgRcvBuffer[t].data[0] < 0x10 && (canMsgRcvBuffer[t].data[1] == 0x7F || (lastCMDSent > 0 && millis() - lastCMDSent >= 1000))) { // Error / No answer
           waitingUnlock = false;
           waitingReplySerialCMD = false;
           lastCMDSent = 0;
-        } else if (waitingUnlock && canMsgRcvBuffer[t].data[1] == 0x50 && canMsgRcvBuffer[t].data[2] == DiagSess) {
+        } else if (waitingUnlock && canMsgRcvBuffer[t].data[0] < 0x10 && canMsgRcvBuffer[t].data[1] == 0x50 && canMsgRcvBuffer[t].data[2] == DiagSess) {
           sendDiagFrame(UnlockCMD, strlen(UnlockCMD));
         }
 
-        if (waitingUnlock && canMsgRcvBuffer[t].data[1] == 0x67 && canMsgRcvBuffer[t].data[2] == UnlockService) {
-          char tmp[4];
+        if (waitingUnlock && canMsgRcvBuffer[t].data[0] < 0x10 && canMsgRcvBuffer[t].data[1] == 0x67 && canMsgRcvBuffer[t].data[2] == UnlockService) {
           char * SeedKey = (char * ) malloc(9);
-          char * UnlockCMD = (char * ) malloc(16);
+          char * UnlockCMD_Seed = (char * ) malloc(16);
 
           snprintf(tmp, 3, "%02X", canMsgRcvBuffer[t].data[3]);
           strcpy(SeedKey, tmp);
@@ -574,21 +568,23 @@ void parseCAN() {
           unsigned long Key = compute_response(UnlockKey, strtoul(SeedKey, NULL, 16));
           snprintf(SeedKey, 9, "%08lX", Key);
 
-          strcpy(UnlockCMD, "27");
+          strcpy(UnlockCMD_Seed, "27");
           snprintf(tmp, 3, "%02X", (UnlockService + 1)); // Answer
-          strcat(UnlockCMD, tmp);
-          strcat(UnlockCMD, SeedKey);
+          strcat(UnlockCMD_Seed, tmp);
+          strcat(UnlockCMD_Seed, SeedKey);
 
           if (Dump) {
             snprintf(tmp, 4, "%02X", CAN_EMIT_ID);
+            tmp[3] = ':';
             Serial.print(tmp);
-            Serial.print(":");
-            Serial.println(UnlockCMD);
+            Serial.println(UnlockCMD_Seed);
           }
 
-          sendDiagFrame(UnlockCMD, strlen(UnlockCMD));
+          sendDiagFrame(UnlockCMD_Seed, strlen(UnlockCMD_Seed));
 
           waitingUnlock = false;
+          free(SeedKey);
+          free(UnlockCMD_Seed);
         }
 
         canMsgRcvBuffer[t].can_id = 0;

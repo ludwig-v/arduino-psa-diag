@@ -33,6 +33,7 @@ all copies or substantial portions of the Software.
 
 #define SKETCH_VERSION "1.3"
 #define CAN_RCV_BUFFER 40
+#define CAN_DEFAULT_DELAY 5 // Delay between multiframes
 #define MAX_DATA_LENGTH 512
 #define CS_PIN_CAN0 10
 #define SERIAL_SPEED 115200
@@ -64,8 +65,8 @@ int additionalFrameSize;
 byte DiagSess = 0x03;
 
 char receiveDiagFrameData[MAX_DATA_LENGTH];
-int receiveDiagFrameRead;
-int receiveDiagFrameSize;
+int receiveDiagFrameRead = 0;
+int receiveDiagFrameSize = 0;
 int receiveDiagDataPos = 0;
 bool multiframeOverflow = false;
 
@@ -220,8 +221,8 @@ void receiveAdditionalDiagFrame(can_frame frame) {
 
     if (Dump) {
       snprintf(tmp, 4, "%02X", CAN_RECV_ID);
+      tmp[3] = ':';
       Serial.print(tmp);
-      Serial.print(":");
     }
     Serial.println(receiveDiagFrameData);
   }
@@ -424,8 +425,8 @@ void recvWithTimeout() {
       } else if (receiveDiagFrameData[0] == '?') {
         char tmp[4];
         snprintf(tmp, 4, "%02X", CAN_EMIT_ID);
+        tmp[3] = ':';
         Serial.print(tmp);
-        Serial.print(":");
         snprintf(tmp, 4, "%02X", CAN_RECV_ID);
         Serial.println(tmp);
       } else {
@@ -448,12 +449,12 @@ void recvWithTimeout() {
 }
 
 void loop() {
-  if (Serial.available() > 0) {
+  if (!Lock && Serial.available() > 0) {
     readCANThread.setInterval(5);
 
-    noInterrupts();
+    Timer1.stop();
     recvWithTimeout();
-    interrupts();
+    Timer1.start();
 
     if (Dump) {
       readCANThread.setInterval(0); // We have to be ultra fast to flush MCP2515 buffer and not loosing any frame sent without any delay
@@ -464,8 +465,50 @@ void loop() {
 }
 
 void parseCAN() {
+  char tmp[4];
+
   if (!Lock && !parsingCAN) {
     parsingCAN = true;
+
+    if (millis() - lastBSIemul >= 100) { // Every 100ms, minimal frames required to power up a telematic unit
+      struct can_frame diagFrame;
+
+      diagFrame.data[0] = 0x80;
+      diagFrame.data[1] = 0x00;
+      diagFrame.data[2] = 0x02;
+      diagFrame.data[3] = 0x00;
+      diagFrame.data[4] = 0x00;
+      diagFrame.can_id = 0x18;
+      diagFrame.can_dlc = 5;
+      CAN0.sendMessage( & diagFrame); // Original delay : 1000ms
+
+      diagFrame.data[0] = 0x0E;
+      diagFrame.data[1] = 0x00;
+      diagFrame.data[2] = 0x03;
+      diagFrame.data[3] = 0x2A;
+      diagFrame.data[4] = 0x31;
+      diagFrame.data[5] = 0x00;
+      diagFrame.data[6] = 0x81;
+      diagFrame.data[7] = 0xAC;
+      diagFrame.can_id = 0x36;
+      diagFrame.can_dlc = 8;
+      CAN0.sendMessage( & diagFrame); // Original delay : 100ms
+
+      diagFrame.data[0] = 0x8E;
+      diagFrame.data[1] = 0x61;
+      diagFrame.data[2] = 0x01;
+      diagFrame.data[3] = 0x88;
+      diagFrame.data[4] = 0xAC;
+      diagFrame.data[5] = 0x7B;
+      diagFrame.data[6] = 0x7B;
+      diagFrame.data[7] = 0x20;
+      diagFrame.can_id = 0xF6;
+      diagFrame.can_dlc = 8;
+      CAN0.sendMessage( & diagFrame); // Original delay : 50ms
+
+      lastBSIemul = millis();
+    }
+
     for (int t = 0; t < CAN_RCV_BUFFER; t++) {
       if (canMsgRcvBuffer[t].can_id > 0) {
         int id = canMsgRcvBuffer[t].can_id;
@@ -488,7 +531,7 @@ void parseCAN() {
               struct can_frame diagFrame;
               diagFrame.data[0] = 0x30;
               diagFrame.data[1] = 0x00;
-              diagFrame.data[2] = 0x05;
+              diagFrame.data[2] = CAN_DEFAULT_DELAY;
               diagFrame.can_id = CAN_EMIT_ID;
               diagFrame.can_dlc = 3;
               CAN0.sendMessage( & diagFrame);
@@ -503,10 +546,9 @@ void parseCAN() {
           } else if (len == 3 && canMsgRcvBuffer[t].data[0] == 0x30 && canMsgRcvBuffer[t].data[1] == 0x00) {
             // Ignore in dump mode
           } else {
-            char tmp[4];
             snprintf(tmp, 4, "%02X", id);
+            tmp[3] = ':';
             Serial.print(tmp);
-            Serial.print(":");
             for (int i = 1; i < len; i++) { // Strip first byte = Data length
               snprintf(tmp, 3, "%02X", canMsgRcvBuffer[t].data[i]);
               Serial.print(tmp);
@@ -529,7 +571,7 @@ void parseCAN() {
                 struct can_frame diagFrame;
                 diagFrame.data[0] = 0x30;
                 diagFrame.data[1] = 0x00;
-                diagFrame.data[2] = 0x05;
+                diagFrame.data[2] = CAN_DEFAULT_DELAY;
                 diagFrame.can_id = CAN_EMIT_ID;
                 diagFrame.can_dlc = 3;
                 CAN0.sendMessage( & diagFrame);
@@ -542,7 +584,6 @@ void parseCAN() {
               if (!multiframeOverflow)
                 receiveAdditionalDiagFrame(canMsgRcvBuffer[t]);
             } else {
-              char tmp[3];
               for (int i = 1; i < len; i++) { // Strip first byte = Data length
                 snprintf(tmp, 3, "%02X", canMsgRcvBuffer[t].data[i]);
                 Serial.print(tmp);
@@ -552,18 +593,17 @@ void parseCAN() {
           }
         }
 
-        if (canMsgRcvBuffer[t].data[1] == 0x7F || (lastCMDSent > 0 && millis() - lastCMDSent >= 1000)) { // Error / No answer
+        if (canMsgRcvBuffer[t].data[0] < 0x10 && (canMsgRcvBuffer[t].data[1] == 0x7F || (lastCMDSent > 0 && millis() - lastCMDSent >= 1000))) { // Error / No answer
           waitingUnlock = false;
           waitingReplySerialCMD = false;
           lastCMDSent = 0;
-        } else if (waitingUnlock && canMsgRcvBuffer[t].data[1] == 0x50 && canMsgRcvBuffer[t].data[2] == DiagSess) {
+        } else if (waitingUnlock && canMsgRcvBuffer[t].data[0] < 0x10 && canMsgRcvBuffer[t].data[1] == 0x50 && canMsgRcvBuffer[t].data[2] == DiagSess) {
           sendDiagFrame(UnlockCMD, strlen(UnlockCMD));
         }
 
-        if (waitingUnlock && canMsgRcvBuffer[t].data[1] == 0x67 && canMsgRcvBuffer[t].data[2] == UnlockService) {
-          char tmp[4];
+        if (waitingUnlock && canMsgRcvBuffer[t].data[0] < 0x10 && canMsgRcvBuffer[t].data[1] == 0x67 && canMsgRcvBuffer[t].data[2] == UnlockService) {
           char * SeedKey = (char * ) malloc(9);
-          char * UnlockCMD = (char * ) malloc(16);
+          char * UnlockCMD_Seed = (char * ) malloc(16);
 
           snprintf(tmp, 3, "%02X", canMsgRcvBuffer[t].data[3]);
           strcpy(SeedKey, tmp);
@@ -576,21 +616,23 @@ void parseCAN() {
           unsigned long Key = compute_response(UnlockKey, strtoul(SeedKey, NULL, 16));
           snprintf(SeedKey, 9, "%08lX", Key);
 
-          strcpy(UnlockCMD, "27");
+          strcpy(UnlockCMD_Seed, "27");
           snprintf(tmp, 3, "%02X", (UnlockService + 1)); // Answer
-          strcat(UnlockCMD, tmp);
-          strcat(UnlockCMD, SeedKey);
+          strcat(UnlockCMD_Seed, tmp);
+          strcat(UnlockCMD_Seed, SeedKey);
 
           if (Dump) {
             snprintf(tmp, 4, "%02X", CAN_EMIT_ID);
+            tmp[3] = ':';
             Serial.print(tmp);
-            Serial.print(":");
-            Serial.println(UnlockCMD);
+            Serial.println(UnlockCMD_Seed);
           }
 
-          sendDiagFrame(UnlockCMD, strlen(UnlockCMD));
+          sendDiagFrame(UnlockCMD_Seed, strlen(UnlockCMD_Seed));
 
           waitingUnlock = false;
+          free(SeedKey);
+          free(UnlockCMD_Seed);
         }
 
         canMsgRcvBuffer[t].can_id = 0;
