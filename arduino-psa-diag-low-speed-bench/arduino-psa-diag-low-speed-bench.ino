@@ -84,6 +84,8 @@ int sendingAdditionalDiagFramesPos = 0;
 bool sendingAdditionalDiagFrames = false;
 unsigned long lastSendingAdditionalDiagFrames = 0;
 
+unsigned long lastBSIemul = 0;
+
 bool readingCAN = false;
 bool parsingCAN = false;
 bool Lock = false;
