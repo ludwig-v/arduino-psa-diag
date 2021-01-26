@@ -2,6 +2,7 @@
 
 | ECU Family | ECUs (Non-Exhaustive list) | IDs command |
 | - | - | - |
+| AAS | ASS, AAS_UDS, AAS_UDS_G6 | >75D:65D |
 | ABRASR |  | >6AD:68D |
 | AFFICHEUR | EMF | >765:665 |
 | AFFICHEUR_LIN |  | >736:716 |
