@@ -18,9 +18,12 @@ Check out [ECU_LIST.md](https://github.com/ludwig-v/arduino-psa-diag/blob/master
 Once you are on the chosen ECU you can unlock writing easily using this shortcut:
 
     :UNLOCK_KEY:UNLOCK_SERVICE:DIAG_SESSION_ID
-NAC Telematic unit unlock example:
+NAC Telematic unit (**UDS**) unlock example:
 
     :D91C:03:03
+AMPLI_AUDIO Amplifier unit (**KWP**) unlock example:
+
+    :A7D8:83:C0
 Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/main/ECU_KEYS.md) for other ECUs keys
 
 ## UDS Commands
