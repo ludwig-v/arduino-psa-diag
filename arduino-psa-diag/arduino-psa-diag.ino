@@ -610,7 +610,19 @@ void parseCAN() {
           } else if (len > 2 && canMsgRcvBuffer[t].data[0] >= 0x10 && canMsgRcvBuffer[t].data[0] <= 0x15) { // Acknowledgement Read
             receiveDiagFrameSize = ((canMsgRcvBuffer[t].data[0] - 0x10) * 256) + canMsgRcvBuffer[t].data[1];
 
-            if (waitingReplySerialCMD) {
+            if (waitingReplySerialCMD && LIN) {
+              struct can_frame diagFrame;
+              diagFrame.data[0] = 0x70;
+              diagFrame.data[1] = 0x30;
+              diagFrame.data[2] = 0x00;
+              diagFrame.data[3] = framesDelayInput;
+              diagFrame.can_id = CAN_EMIT_ID;
+              diagFrame.can_dlc = 4;
+              CAN0.sendMessage( & diagFrame);
+
+              waitingReplySerialCMD = false;
+              lastCMDSent = 0;
+            } else if (waitingReplySerialCMD) {
               struct can_frame diagFrame;
               diagFrame.data[0] = 0x30;
               diagFrame.data[1] = 0x00;
@@ -655,7 +667,19 @@ void parseCAN() {
             } else if (len > 2 && canMsgRcvBuffer[t].data[0] >= 0x10 && canMsgRcvBuffer[t].data[0] <= 0x15) { // Acknowledgement Read
               receiveDiagFrameSize = ((canMsgRcvBuffer[t].data[0] - 0x10) * 256) + canMsgRcvBuffer[t].data[1];
 
-              if (waitingReplySerialCMD) {
+              if (waitingReplySerialCMD && LIN) {
+                struct can_frame diagFrame;
+                diagFrame.data[0] = 0x70;
+                diagFrame.data[1] = 0x30;
+                diagFrame.data[2] = 0x00;
+                diagFrame.data[3] = framesDelayInput;
+                diagFrame.can_id = CAN_EMIT_ID;
+                diagFrame.can_dlc = 4;
+                CAN0.sendMessage( & diagFrame);
+
+                waitingReplySerialCMD = false;
+                lastCMDSent = 0;
+              } else if (waitingReplySerialCMD) {
                 struct can_frame diagFrame;
                 diagFrame.data[0] = 0x30;
                 diagFrame.data[1] = 0x00;
