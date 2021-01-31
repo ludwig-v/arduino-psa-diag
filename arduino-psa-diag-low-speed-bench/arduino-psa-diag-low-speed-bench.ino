@@ -30,7 +30,7 @@ all copies or substantial portions of the Software.
 //  Configuration  //
 /////////////////////
 
-#define SKETCH_VERSION "1.4"
+#define SKETCH_VERSION "1.5"
 #define CAN_RCV_BUFFER 40
 #define CAN_DEFAULT_DELAY 5 // Delay between multiframes
 #define MAX_DATA_LENGTH 512
@@ -60,7 +60,6 @@ int CAN_EMIT_ID = 0x752; // BSI
 int CAN_RECV_ID = 0x652; // BSI
 
 int additionalFrameID;
-int additionalFrameSize;
 byte DiagSess = 0x03;
 
 char receiveDiagFrameData[MAX_DATA_LENGTH];
@@ -69,6 +68,7 @@ int receiveDiagFrameSize = 0;
 int receiveDiagDataPos = 0;
 bool multiframeOverflow = false;
 int receiveDiagFrameAlreadyFlushed = 0;
+bool LIN = false;
 
 bool waitingReplySerialCMD = false;
 unsigned long lastCMDSent = 0;
@@ -178,10 +178,14 @@ void receiveDiagMultiFrame(can_frame frame) {
   }
 }
 
-void receiveAdditionalDiagFrame(can_frame frame) {
+void receiveAdditionalDiagFrame(can_frame frame, bool encap) {
   int i = 0;
   int frameOrder = 0;
   int framePos = 0;
+  byte maxBytesperFrame = 8;
+
+  if (encap) // LIN
+    maxBytesperFrame--;
 
   if (frame.data[0] == 0x20) {
     if (receiveDiagDataPos == 0) {
@@ -200,10 +204,10 @@ void receiveAdditionalDiagFrame(can_frame frame) {
     snprintf(tmp, 3, "%02X", frame.data[i]);
 
     if (receiveDiagFrameAlreadyFlushed > 0) {
-      framePos = (frameOrder * 7 * 2) + ((i - 1) * 2) + 1;
+      framePos = (frameOrder * (maxBytesperFrame - 1) * 2) + ((i - 1) * 2) + 1;
     } else {
       // 6 bytes already received + 7 bytes max per frame
-      framePos = (6 * 2) + (frameOrder * 7 * 2) + ((i - 1) * 2) + 1;
+      framePos = ((maxBytesperFrame - 2) * 2) + (frameOrder * (maxBytesperFrame - 1) * 2) + ((i - 1) * 2) + 1;
     }
 
     if (framePos > MAX_DATA_LENGTH) { // Avoid overflow
@@ -227,7 +231,7 @@ void receiveAdditionalDiagFrame(can_frame frame) {
   if (framesDelay > 0) { // Can't flush buffer fast enough if no delay (some frames will be lost, data will be truncated)
     if (frame.data[0] == 0x2F) {
       if (Dump && receiveDiagFrameAlreadyFlushed == 0) {
-        snprintf(tmp, 4, "%02X", CAN_RECV_ID);
+        snprintf(tmp, 4, "%02X", frame.can_id);
         Serial.print(tmp);
         Serial.print(":");
       }
@@ -243,7 +247,7 @@ void receiveAdditionalDiagFrame(can_frame frame) {
 
   if ((receiveDiagFrameRead + receiveDiagFrameAlreadyFlushed) == (receiveDiagFrameSize * 2) || framePos > MAX_DATA_LENGTH) { // Data complete or overflow
     if (Dump && receiveDiagFrameAlreadyFlushed == 0) {
-      snprintf(tmp, 4, "%02X", CAN_RECV_ID);
+      snprintf(tmp, 4, "%02X", frame.can_id);
       Serial.print(tmp);
       Serial.print(":");
     }
@@ -271,54 +275,106 @@ void sendAdditionalDiagFrames() {
       tmpFrame[frameLen] = ahex2int(receiveDiagFrameData[i], receiveDiagFrameData[(i + 1)]);
       frameLen++;
 
-      if (frameLen > 0 && (frameLen % 8) == 0) { // Multi-frames
-        diagFrame.data[0] = additionalFrameID;
-        diagFrame.data[1] = tmpFrame[0];
-        diagFrame.data[2] = tmpFrame[1];
-        diagFrame.data[3] = tmpFrame[2];
-        diagFrame.data[4] = tmpFrame[3];
-        diagFrame.data[5] = tmpFrame[4];
-        diagFrame.data[6] = tmpFrame[5];
-        diagFrame.data[7] = tmpFrame[6];
+      if (LIN) {
+        if (frameLen > 0 && (frameLen % 7) == 0) { // Multi-frames
+          diagFrame.data[0] = 0x70;
+          diagFrame.data[1] = additionalFrameID;
+          diagFrame.data[2] = tmpFrame[0];
+          diagFrame.data[3] = tmpFrame[1];
+          diagFrame.data[4] = tmpFrame[2];
+          diagFrame.data[5] = tmpFrame[3];
+          diagFrame.data[6] = tmpFrame[4];
+          diagFrame.data[7] = tmpFrame[5];
 
-        frameLen = 8;
+          frameLen = 8;
+          i -= 4; // First bytes are used by diag data
 
-        i -= 2; // First byte is used by diag data
+          additionalFrameID++;
+          if (additionalFrameID > 0x2F) {
+            additionalFrameID = 0x20;
+          }
 
-        additionalFrameID++;
-        if (additionalFrameID > 0x2F) {
-          additionalFrameID = 0x20;
+          diagFrame.can_id = CAN_EMIT_ID;
+          diagFrame.can_dlc = frameLen;
+          CAN0.sendMessage( & diagFrame);
+
+          frameLen = 0;
+
+          return;
+        } else if ((i + 2) == receiveDiagFrameRead) {
+          diagFrame.data[0] = 0x70;
+          diagFrame.data[1] = additionalFrameID;
+          diagFrame.data[2] = tmpFrame[0];
+          diagFrame.data[3] = tmpFrame[1];
+          diagFrame.data[4] = tmpFrame[2];
+          diagFrame.data[5] = tmpFrame[3];
+          diagFrame.data[6] = tmpFrame[4];
+          diagFrame.data[7] = tmpFrame[5];
+
+          frameLen = frameLen + 2;
+          additionalFrameID = 0x00;
+
+          diagFrame.can_id = CAN_EMIT_ID;
+          diagFrame.can_dlc = frameLen;
+          CAN0.sendMessage( & diagFrame);
+
+          receiveDiagDataPos = receiveDiagFrameRead = 0;
+
+          sendingAdditionalDiagFramesPos = 0;
+          lastSendingAdditionalDiagFrames = 0;
+          sendingAdditionalDiagFrames = false;
         }
 
-        diagFrame.can_id = CAN_EMIT_ID;
-        diagFrame.can_dlc = frameLen;
-        CAN0.sendMessage( & diagFrame);
+      } else {
+        if (frameLen > 0 && (frameLen % 8) == 0) { // Multi-frames
+          diagFrame.data[0] = additionalFrameID;
+          diagFrame.data[1] = tmpFrame[0];
+          diagFrame.data[2] = tmpFrame[1];
+          diagFrame.data[3] = tmpFrame[2];
+          diagFrame.data[4] = tmpFrame[3];
+          diagFrame.data[5] = tmpFrame[4];
+          diagFrame.data[6] = tmpFrame[5];
+          diagFrame.data[7] = tmpFrame[6];
 
-        frameLen = 0;
+          frameLen = 8;
 
-        return;
-      } else if ((i + 2) == receiveDiagFrameRead) {
-        diagFrame.data[0] = additionalFrameID;
-        diagFrame.data[1] = tmpFrame[0];
-        diagFrame.data[2] = tmpFrame[1];
-        diagFrame.data[3] = tmpFrame[2];
-        diagFrame.data[4] = tmpFrame[3];
-        diagFrame.data[5] = tmpFrame[4];
-        diagFrame.data[6] = tmpFrame[5];
-        diagFrame.data[7] = tmpFrame[6];
+          i -= 2; // First byte is used by diag data
 
-        frameLen = frameLen + 1;
-        additionalFrameID = 0x00;
+          additionalFrameID++;
+          if (additionalFrameID > 0x2F) {
+            additionalFrameID = 0x20;
+          }
 
-        diagFrame.can_id = CAN_EMIT_ID;
-        diagFrame.can_dlc = frameLen;
-        CAN0.sendMessage( & diagFrame);
+          diagFrame.can_id = CAN_EMIT_ID;
+          diagFrame.can_dlc = frameLen;
+          CAN0.sendMessage( & diagFrame);
 
-        receiveDiagDataPos = receiveDiagFrameRead = 0;
+          frameLen = 0;
 
-        sendingAdditionalDiagFramesPos = 0;
-        lastSendingAdditionalDiagFrames = 0;
-        sendingAdditionalDiagFrames = false;
+          return;
+        } else if ((i + 2) == receiveDiagFrameRead) {
+          diagFrame.data[0] = additionalFrameID;
+          diagFrame.data[1] = tmpFrame[0];
+          diagFrame.data[2] = tmpFrame[1];
+          diagFrame.data[3] = tmpFrame[2];
+          diagFrame.data[4] = tmpFrame[3];
+          diagFrame.data[5] = tmpFrame[4];
+          diagFrame.data[6] = tmpFrame[5];
+          diagFrame.data[7] = tmpFrame[6];
+
+          frameLen = frameLen + 1;
+          additionalFrameID = 0x00;
+
+          diagFrame.can_id = CAN_EMIT_ID;
+          diagFrame.can_dlc = frameLen;
+          CAN0.sendMessage( & diagFrame);
+
+          receiveDiagDataPos = receiveDiagFrameRead = 0;
+
+          sendingAdditionalDiagFramesPos = 0;
+          lastSendingAdditionalDiagFrames = 0;
+          sendingAdditionalDiagFrames = false;
+        }
       }
     }
   }
@@ -345,36 +401,64 @@ void sendDiagFrame(char * data, int frameFullLen) {
     }
   }
 
-  if (frameLen > 7) { // Multi-frames
-    diagFrame.data[0] = 0x10;
-    diagFrame.data[1] = (frameFullLen / 2);
-    diagFrame.data[2] = tmpFrame[0];
-    diagFrame.data[3] = tmpFrame[1];
-    diagFrame.data[4] = tmpFrame[2];
-    diagFrame.data[5] = tmpFrame[3];
-    diagFrame.data[6] = tmpFrame[4];
-    diagFrame.data[7] = tmpFrame[5];
+  if (LIN) {
+    if (frameLen > 6) { // Multi-frames
+      diagFrame.data[0] = 0x70;
+      diagFrame.data[1] = 0x10;
+      diagFrame.data[2] = (frameFullLen / 2);
+      diagFrame.data[3] = tmpFrame[0];
+      diagFrame.data[4] = tmpFrame[1];
+      diagFrame.data[5] = tmpFrame[2];
+      diagFrame.data[6] = tmpFrame[3];
+      diagFrame.data[7] = tmpFrame[4];
 
-    frameLen = 8;
+      frameLen = 8;
+      additionalFrameID = 0x21;
+    } else {
 
-    i -= 4; // First bytes are used by diag data
-    additionalFrameSize = frameFullLen - i;
-    additionalFrameID = 0x21;
+      diagFrame.data[0] = 0x70;
+      diagFrame.data[1] = frameLen;
+      diagFrame.data[2] = tmpFrame[0];
+      diagFrame.data[3] = tmpFrame[1];
+      diagFrame.data[4] = tmpFrame[2];
+      diagFrame.data[5] = tmpFrame[3];
+      diagFrame.data[6] = tmpFrame[4];
+      diagFrame.data[7] = tmpFrame[5];
+
+      frameLen = frameLen + 2;
+      additionalFrameID = 0x00;
+
+      receiveDiagDataPos = receiveDiagFrameRead = 0;
+    }
   } else {
+    if (frameLen > 7) { // Multi-frames
+      diagFrame.data[0] = 0x10;
+      diagFrame.data[1] = (frameFullLen / 2);
+      diagFrame.data[2] = tmpFrame[0];
+      diagFrame.data[3] = tmpFrame[1];
+      diagFrame.data[4] = tmpFrame[2];
+      diagFrame.data[5] = tmpFrame[3];
+      diagFrame.data[6] = tmpFrame[4];
+      diagFrame.data[7] = tmpFrame[5];
 
-    diagFrame.data[0] = frameLen;
-    diagFrame.data[1] = tmpFrame[0];
-    diagFrame.data[2] = tmpFrame[1];
-    diagFrame.data[3] = tmpFrame[2];
-    diagFrame.data[4] = tmpFrame[3];
-    diagFrame.data[5] = tmpFrame[4];
-    diagFrame.data[6] = tmpFrame[5];
-    diagFrame.data[7] = tmpFrame[6];
+      frameLen = 8;
+      additionalFrameID = 0x21;
+    } else {
 
-    frameLen = frameLen + 1;
-    additionalFrameID = 0x00;
+      diagFrame.data[0] = frameLen;
+      diagFrame.data[1] = tmpFrame[0];
+      diagFrame.data[2] = tmpFrame[1];
+      diagFrame.data[3] = tmpFrame[2];
+      diagFrame.data[4] = tmpFrame[3];
+      diagFrame.data[5] = tmpFrame[4];
+      diagFrame.data[6] = tmpFrame[5];
+      diagFrame.data[7] = tmpFrame[6];
 
-    receiveDiagDataPos = receiveDiagFrameRead = 0;
+      frameLen = frameLen + 1;
+      additionalFrameID = 0x00;
+
+      receiveDiagDataPos = receiveDiagFrameRead = 0;
+    }
   }
 
   diagFrame.can_id = CAN_EMIT_ID;
@@ -412,9 +496,10 @@ void recvWithTimeout() {
           pos++;
           ids = strtok(NULL, ":");
         }
+        Serial.println("OK");
       } else if (receiveDiagFrameData[0] == 'T') { // Change CAN multiframes delay
         framesDelayInput = strtoul(receiveDiagFrameData + 1, NULL, 10);
-        Serial.print("CAN Multiframes input delay changed to ");
+        Serial.print("OK: CAN Multiframes input delay changed to ");
         Serial.print(framesDelayInput);
         Serial.println("ms");
       } else if (receiveDiagFrameData[0] == ':') { // Unlock with key
@@ -444,12 +529,18 @@ void recvWithTimeout() {
         waitingUnlock = true;
       } else if (receiveDiagFrameData[0] == 'V') {
         Serial.println(SketchVersion);
+      } else if (receiveDiagFrameData[0] == 'L') {
+        LIN = true;
+        Serial.println("OK: LIN Mode enabled");
+      } else if (receiveDiagFrameData[0] == 'U') {
+        LIN = false;
+        Serial.println("OK: LIN Mode disabled");
       } else if (receiveDiagFrameData[0] == 'N') {
         Dump = false;
-        Serial.println("Normal mode");
+        Serial.println("OK: Normal mode");
       } else if (receiveDiagFrameData[0] == 'X') {
         Dump = true;
-        Serial.println("Dump mode");
+        Serial.println("OK: Dump mode");
       } else if (receiveDiagFrameData[0] == '?') {
         snprintf(tmp, 4, "%02X", CAN_EMIT_ID);
         Serial.print(tmp);
@@ -531,6 +622,16 @@ void parseCAN() {
     for (int t = 0; t < CAN_RCV_BUFFER; t++) {
       if (canMsgRcvBuffer[t].can_id > 0) {
         int id = canMsgRcvBuffer[t].can_id;
+
+        bool encap = false;
+        if (canMsgRcvBuffer[t].data[0] == 0x70) { // UDS or KWP with LIN ECUs, remove encapsulation
+            for (int i = 1; i < canMsgRcvBuffer[t].can_dlc; i++) {
+                canMsgRcvBuffer[t].data[i - 1] = canMsgRcvBuffer[t].data[i];
+            }
+            canMsgRcvBuffer[t].can_dlc--;
+            encap = true;
+        }
+
         int len = canMsgRcvBuffer[t].can_dlc;
 
         if (Dump) {
@@ -539,7 +640,10 @@ void parseCAN() {
           } else if (waitingReplySerialCMD && len == 3 && canMsgRcvBuffer[t].data[0] == 0x30 && canMsgRcvBuffer[t].data[1] == 0x00) { // Acknowledgement Write
             framesDelay = canMsgRcvBuffer[t].data[2];
 
-            sendingAdditionalDiagFramesPos = 12; // 6 bytes already sent
+            if (LIN)
+              sendingAdditionalDiagFramesPos = 10; // 5 bytes already sent
+            else
+              sendingAdditionalDiagFramesPos = 12; // 6 bytes already sent
             sendingAdditionalDiagFrames = true;
 
             waitingReplySerialCMD = false;
@@ -562,7 +666,7 @@ void parseCAN() {
             receiveDiagMultiFrame(canMsgRcvBuffer[t]);
           } else if (len > 1 && canMsgRcvBuffer[t].data[0] >= 0x20 && canMsgRcvBuffer[t].data[0] <= 0x2F) {
             if (!multiframeOverflow)
-              receiveAdditionalDiagFrame(canMsgRcvBuffer[t]);
+              receiveAdditionalDiagFrame(canMsgRcvBuffer[t], encap);
           } else if (len == 3 && canMsgRcvBuffer[t].data[0] == 0x30 && canMsgRcvBuffer[t].data[1] == 0x00) {
             // Ignore in dump mode
             framesDelay = canMsgRcvBuffer[t].data[2];
@@ -581,7 +685,10 @@ void parseCAN() {
             if (waitingReplySerialCMD && len == 3 && canMsgRcvBuffer[t].data[0] == 0x30 && canMsgRcvBuffer[t].data[1] == 0x00) { // Acknowledgement Write
               framesDelay = canMsgRcvBuffer[t].data[2];
 
-              sendingAdditionalDiagFramesPos = 12; // 6 bytes already sent
+              if (LIN)
+                sendingAdditionalDiagFramesPos = 10; // 5 bytes already sent
+              else
+                sendingAdditionalDiagFramesPos = 12; // 6 bytes already sent
               sendingAdditionalDiagFrames = true;
 
               waitingReplySerialCMD = false;
@@ -604,7 +711,7 @@ void parseCAN() {
               receiveDiagMultiFrame(canMsgRcvBuffer[t]);
             } else if (len > 1 && canMsgRcvBuffer[t].data[0] >= 0x20 && canMsgRcvBuffer[t].data[0] <= 0x2F) {
               if (!multiframeOverflow)
-                receiveAdditionalDiagFrame(canMsgRcvBuffer[t]);
+                receiveAdditionalDiagFrame(canMsgRcvBuffer[t], encap);
             } else {
               for (int i = 1; i < len; i++) { // Strip first byte = Data length
                 snprintf(tmp, 3, "%02X", canMsgRcvBuffer[t].data[i]);
