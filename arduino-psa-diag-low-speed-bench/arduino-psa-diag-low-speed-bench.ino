@@ -68,7 +68,7 @@ int receiveDiagFrameSize = 0;
 int receiveDiagDataPos = 0;
 bool multiframeOverflow = false;
 int receiveDiagFrameAlreadyFlushed = 0;
-bool LIN = false;
+byte LIN = 0;
 
 bool waitingReplySerialCMD = false;
 unsigned long lastCMDSent = 0;
@@ -275,9 +275,9 @@ void sendAdditionalDiagFrames() {
       tmpFrame[frameLen] = ahex2int(receiveDiagFrameData[i], receiveDiagFrameData[(i + 1)]);
       frameLen++;
 
-      if (LIN) {
+      if (LIN > 0) {
         if (frameLen > 0 && (frameLen % 7) == 0) { // Multi-frames
-          diagFrame.data[0] = 0x70;
+          diagFrame.data[0] = LIN;
           diagFrame.data[1] = additionalFrameID;
           diagFrame.data[2] = tmpFrame[0];
           diagFrame.data[3] = tmpFrame[1];
@@ -302,7 +302,7 @@ void sendAdditionalDiagFrames() {
 
           return;
         } else if ((i + 2) == receiveDiagFrameRead) {
-          diagFrame.data[0] = 0x70;
+          diagFrame.data[0] = LIN;
           diagFrame.data[1] = additionalFrameID;
           diagFrame.data[2] = tmpFrame[0];
           diagFrame.data[3] = tmpFrame[1];
@@ -401,9 +401,9 @@ void sendDiagFrame(char * data, int frameFullLen) {
     }
   }
 
-  if (LIN) {
+  if (LIN > 0) {
     if (frameLen > 6) { // Multi-frames
-      diagFrame.data[0] = 0x70;
+      diagFrame.data[0] = LIN;
       diagFrame.data[1] = 0x10;
       diagFrame.data[2] = (frameFullLen / 2);
       diagFrame.data[3] = tmpFrame[0];
@@ -416,7 +416,7 @@ void sendDiagFrame(char * data, int frameFullLen) {
       additionalFrameID = 0x21;
     } else {
 
-      diagFrame.data[0] = 0x70;
+      diagFrame.data[0] = LIN;
       diagFrame.data[1] = frameLen;
       diagFrame.data[2] = tmpFrame[0];
       diagFrame.data[3] = tmpFrame[1];
@@ -496,7 +496,7 @@ void recvWithTimeout() {
           pos++;
           ids = strtok(NULL, ":");
         }
-        LIN = false;
+        LIN = 0;
         Serial.println("OK");
       } else if (receiveDiagFrameData[0] == 'T') { // Change CAN multiframes delay
         framesDelayInput = strtoul(receiveDiagFrameData + 1, NULL, 10);
@@ -531,10 +531,11 @@ void recvWithTimeout() {
       } else if (receiveDiagFrameData[0] == 'V') {
         Serial.println(SketchVersion);
       } else if (receiveDiagFrameData[0] == 'L') {
-        LIN = true;
-        Serial.println("OK: LIN Mode enabled");
+        LIN = strtoul(receiveDiagFrameData + 1, NULL, 16);
+        Serial.print("OK: LIN Mode enabled on ID ");
+        Serial.println(LIN);
       } else if (receiveDiagFrameData[0] == 'U') {
-        LIN = false;
+        LIN = 0;
         Serial.println("OK: LIN Mode disabled");
       } else if (receiveDiagFrameData[0] == 'N') {
         Dump = false;
@@ -625,7 +626,7 @@ void parseCAN() {
         int id = canMsgRcvBuffer[t].can_id;
 
         bool encap = false;
-        if (canMsgRcvBuffer[t].data[0] == 0x70) { // UDS or KWP with LIN ECUs, remove encapsulation
+        if (canMsgRcvBuffer[t].data[0] >= 0x40) { // UDS or KWP with LIN ECUs, remove encapsulation
             for (int i = 1; i < canMsgRcvBuffer[t].can_dlc; i++) {
                 canMsgRcvBuffer[t].data[i - 1] = canMsgRcvBuffer[t].data[i];
             }
@@ -641,7 +642,7 @@ void parseCAN() {
           } else if (waitingReplySerialCMD && len == 3 && canMsgRcvBuffer[t].data[0] == 0x30 && canMsgRcvBuffer[t].data[1] == 0x00) { // Acknowledgement Write
             framesDelay = canMsgRcvBuffer[t].data[2];
 
-            if (LIN)
+            if (LIN > 0)
               sendingAdditionalDiagFramesPos = 10; // 5 bytes already sent
             else
               sendingAdditionalDiagFramesPos = 12; // 6 bytes already sent
@@ -654,7 +655,7 @@ void parseCAN() {
 
             if (waitingReplySerialCMD && LIN) {
               struct can_frame diagFrame;
-              diagFrame.data[0] = 0x70;
+              diagFrame.data[0] = LIN;
               diagFrame.data[1] = 0x30;
               diagFrame.data[2] = 0x00;
               diagFrame.data[3] = framesDelayInput;
@@ -698,7 +699,7 @@ void parseCAN() {
             if (waitingReplySerialCMD && len == 3 && canMsgRcvBuffer[t].data[0] == 0x30 && canMsgRcvBuffer[t].data[1] == 0x00) { // Acknowledgement Write
               framesDelay = canMsgRcvBuffer[t].data[2];
 
-              if (LIN)
+              if (LIN > 0)
                 sendingAdditionalDiagFramesPos = 10; // 5 bytes already sent
               else
                 sendingAdditionalDiagFramesPos = 12; // 6 bytes already sent
@@ -711,7 +712,7 @@ void parseCAN() {
 
               if (waitingReplySerialCMD && LIN) {
                 struct can_frame diagFrame;
-                diagFrame.data[0] = 0x70;
+                diagFrame.data[0] = LIN;
                 diagFrame.data[1] = 0x30;
                 diagFrame.data[2] = 0x00;
                 diagFrame.data[3] = framesDelayInput;
