@@ -496,6 +496,7 @@ void recvWithTimeout() {
           pos++;
           ids = strtok(NULL, ":");
         }
+        LIN = false;
         Serial.println("OK");
       } else if (receiveDiagFrameData[0] == 'T') { // Change CAN multiframes delay
         framesDelayInput = strtoul(receiveDiagFrameData + 1, NULL, 10);
