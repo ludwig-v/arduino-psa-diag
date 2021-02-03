@@ -52,8 +52,6 @@ MCP2515 CAN0(CS_PIN_CAN0); // CAN-BUS Shield
 // My variables
 bool Dump = false; // Passive dump mode, dump Diagbox frames
 
-// CAN-BUS Messages
-struct can_frame canMsgRcv;
 char tmp[4];
 
 int CAN_EMIT_ID = 0x752; // BSI
@@ -65,7 +63,7 @@ byte DiagSess = 0x03;
 char receiveDiagFrameData[MAX_DATA_LENGTH];
 int receiveDiagFrameRead = 0;
 int receiveDiagFrameSize = 0;
-int receiveDiagDataPos = 0;
+byte receiveDiagDataPos = 0;
 bool multiframeOverflow = false;
 int receiveDiagFrameAlreadyFlushed = 0;
 byte LIN = 0;
@@ -75,8 +73,8 @@ unsigned long lastCMDSent = 0;
 bool waitingUnlock = false;
 unsigned short UnlockKey = 0x0000;
 byte UnlockService = 0x00;
-char * UnlockCMD = (char * ) malloc(5);
-char * SketchVersion = (char * ) malloc(4);
+char UnlockCMD[5];
+char SketchVersion[4];
 byte framesDelayInput = CAN_DEFAULT_DELAY;
 byte framesDelay = CAN_DEFAULT_DELAY;
 
@@ -715,8 +713,8 @@ void parseCAN() {
         }
 
         if (waitingUnlock && canMsgRcvBuffer[t].data[0] < 0x10 && canMsgRcvBuffer[t].data[1] == 0x67 && canMsgRcvBuffer[t].data[2] == UnlockService) {
-          char * SeedKey = (char * ) malloc(9);
-          char * UnlockCMD_Seed = (char * ) malloc(16);
+          char SeedKey[9];
+          char UnlockCMD_Seed[16];
 
           snprintf(tmp, 3, "%02X", canMsgRcvBuffer[t].data[3]);
           strcpy(SeedKey, tmp);
@@ -744,8 +742,6 @@ void parseCAN() {
           sendDiagFrame(UnlockCMD_Seed, strlen(UnlockCMD_Seed));
 
           waitingUnlock = false;
-          free(SeedKey);
-          free(UnlockCMD_Seed);
         }
 
         canMsgRcvBuffer[t].can_id = 0;
@@ -761,6 +757,7 @@ void timerCallback() {
 
 void readCAN() {
   if (!Lock && !readingCAN) {
+    struct can_frame canMsgRcv;
     readingCAN = true;
     while (CAN0.readMessage( & canMsgRcv) == MCP2515::ERROR_OK) {
       for (int i = 0; i < CAN_RCV_BUFFER; i++) {
