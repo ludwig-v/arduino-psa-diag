@@ -2,7 +2,6 @@
 
 | Code | Detail |
 | - | - |
-| PFFE | No fault |
 | P1517 | Coded engine immobiliser function |
 | P0335 | Engine speed fault |
 | P0340 | Crankshaft-camshaft synchronisation - Camshafts |

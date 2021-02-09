@@ -2,7 +2,6 @@
 
 | Code | Detail |
 | - | - |
-| FFFE | No fault |
 | P0562 | Under voltage |
 | P0563 | Excess voltage |
 | C1151 | Reawakening information absent |

@@ -2,7 +2,6 @@
 
 | Code | Detail |
 | - | - |
-| FFFE | No fault |
 | U1118 | Fault Communication with the BSI |
 | U1218 | Fault Communication with the BSI |
 | U1000 | Fault in communication between the automatic |

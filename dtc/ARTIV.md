@@ -2,7 +2,6 @@
 
 | Code | Detail |
 | - | - |
-| FFFE | No fault |
 | U1F03 | Absence of communication with the BSI fault |
 | U1F0A | CAN fault |
 | U1F0F | Fault: ECU not communicating on the CAN |
