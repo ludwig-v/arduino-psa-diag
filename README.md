@@ -80,10 +80,11 @@ Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/m
 |--|--|
 | 7E00 | Keep-Alive reply |
 | 54 | Faults cleared |
-| 7101FF0001 | Flash erased successfully |
-| 7103FF0002 | Flash erased successfully |
+| 7103FF0001 | Flash erasing in progress |
+| 7103FF0003 | Flash not erased: error |
 | 7101FF0401 | ZI erased successfully |
-| 7103FF0402 | ZI erased successfully |
+| 7103FF0402 | ZI erasing in progress |
+| 7103FF0403 | ZI not erased: error |
 | 77 | Flash autocontrol OK |
 | 5001XXXXXXXX | Communication closed |
 | 5002XXXXXXXX | Download session opened |
@@ -100,6 +101,8 @@ Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/m
 | 76XX0A | Invalid checksum on download frame XX |
 | 7F3478 | Download Writing in progress |
 | 7F3778 | Flash autocontrol in progress |
+| 7FXX78 | In progress |
+| 7F2231 | Failed Configuration Read - Not allowed operation |
 | 7F2724 | Anti-Bruteforce active |
 | 7F2713 | Invalid SEED Answer (KEY) |
 | 7F2E78 | Configuration Write in progress |
