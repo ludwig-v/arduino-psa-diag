@@ -4,6 +4,8 @@
 
 *Spaces in commands are only for readability*
 
+*.ulp files are including ELF files while .cal are including settings only (safer)*
+
 ### Step 1 - Download session
 | Command | Detail |
 |--|--|
@@ -20,7 +22,7 @@
 
 | Command | Detail |
 |--|--|
-| 3101FF00 XX F05A | Empty flash memory - XX = Value from "S0" line inside calibration file (Data[10]) - most of times 81 or 82 |
+| 3101FF00 XX F05A | Empty flash memory - XX = Value from "S0" line inside calibration file (Data[10]) - 81 = .cal / 82 = .ulp |
 
 Resend the same command until you get the response 7101FF000**2** (*7101FF000**1** = Erasing in progress*)
 
@@ -28,7 +30,7 @@ Resend the same command until you get the response 7101FF000**2** (*7101FF000**1
 
 | Command | Detail |
 |--|--|
-| 34 XX 110000 | Prepare flash writing - XX = Value from "S0" line inside calibration file (Data[10]) - most of times 81 or 82 |
+| 34 XX 110000 | Prepare flash writing - XX = Value from "S0" line inside calibration file (Data[10]) - 81 = .cal / 82 = .ulp |
 
 Wait until you get the response 741000
 
@@ -71,7 +73,7 @@ Wait until you get the response 7103FF0402
 
 | Command | Detail |
 |--|--|
-| 34 XX 110000 | Prepare ZI zone writing - XX = Value from "S0" line inside calibration file (Data[10]) +2 - most of times 83 or 84 |
+| 34 83 110000 | Prepare ZI zone writing |
 
 Wait until you get the response 741000
 
