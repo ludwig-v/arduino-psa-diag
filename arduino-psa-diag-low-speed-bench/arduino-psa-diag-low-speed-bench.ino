@@ -92,6 +92,8 @@ Thread readCANThread = Thread();
 Thread parseCANThread = Thread();
 Thread sendAdditionalDiagFramesThread = Thread();
 
+unsigned long lastBSIemul = 0;
+
 void setup() {
   Serial.begin(SERIAL_SPEED);
 
