@@ -482,26 +482,37 @@ void sendKeepAlive() {
 
   if (sendKeepAlives) {
     if (sendKeepAliveType == 'K') { // KWP
-      diagFrame.data[0] = 0x01;
-      diagFrame.data[1] = 0x3E;
-    
-      diagFrame.can_id = CAN_EMIT_ID;
-      diagFrame.can_dlc = 2;
-    } else if (sendKeepAliveType == 'L') { // LIN
-      diagFrame.data[0] = LIN;
-      diagFrame.data[1] = 0x02;
-      diagFrame.data[2] = 0x3E;
-      diagFrame.data[2] = 0x00;
-    
-      diagFrame.can_id = CAN_EMIT_ID;
-      diagFrame.can_dlc = 4;
+      if (LIN > 0) {
+        diagFrame.data[0] = LIN;
+        diagFrame.data[1] = 0x01;
+        diagFrame.data[2] = 0x3E;
+
+        diagFrame.can_id = CAN_EMIT_ID;
+        diagFrame.can_dlc = 3;
+      } else {
+        diagFrame.data[0] = 0x01;
+        diagFrame.data[1] = 0x3E;
+
+        diagFrame.can_id = CAN_EMIT_ID;
+        diagFrame.can_dlc = 2;
+      }
     } else { // UDS
-      diagFrame.data[0] = 0x02;
-      diagFrame.data[1] = 0x3E;
-      diagFrame.data[2] = 0x00;
-    
-      diagFrame.can_id = CAN_EMIT_ID;
-      diagFrame.can_dlc = 3;
+      if (LIN > 0) {
+        diagFrame.data[0] = LIN;
+        diagFrame.data[1] = 0x02;
+        diagFrame.data[2] = 0x3E;
+        diagFrame.data[3] = 0x00;
+
+        diagFrame.can_id = CAN_EMIT_ID;
+        diagFrame.can_dlc = 4;
+      } else {
+        diagFrame.data[0] = 0x02;
+        diagFrame.data[1] = 0x3E;
+        diagFrame.data[2] = 0x00;
+
+        diagFrame.can_id = CAN_EMIT_ID;
+        diagFrame.can_dlc = 3;
+      }
     }
 
     CAN0.sendMessage( & diagFrame);
@@ -570,8 +581,6 @@ void recvWithTimeout() {
 
         if (DiagSess == 0xC0) { // KWP
           sendKeepAliveType = 'K';
-        } else if (LIN > 0) { // LIN
-          sendKeepAliveType = 'L';
         } else { // UDS
           sendKeepAliveType = 'U';
         }
@@ -594,7 +603,7 @@ void recvWithTimeout() {
         Serial.println("OK");
       } else if (receiveDiagFrameData[0] == 'K') {
         sendKeepAlives = true;
-        if (receiveDiagFrameData[1] == 'U' || receiveDiagFrameData[1] == 'L' || receiveDiagFrameData[1] == 'K') {
+        if (receiveDiagFrameData[1] == 'U' || receiveDiagFrameData[1] == 'K') {
           sendKeepAliveType = receiveDiagFrameData[1];
         }
         Serial.println("OK");
