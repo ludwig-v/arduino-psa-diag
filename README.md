@@ -99,20 +99,31 @@ Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/m
 | 741000 | Download Writing ready |
 | 76XX02 | Download frame XX injected with success |
 | 76XX0A | Invalid checksum on download frame XX |
+
+## UDS Errors
+
+| Answer | Description |
+|--|--|
 | 7F3478 | Download Writing in progress |
 | 7F3778 | Flash autocontrol in progress |
-| 7FXX78 | In progress |
-| 7F2231 | Failed Configuration Read - Not allowed operation |
-| 7F2724 | Anti-Bruteforce active |
-| 7F2713 | Invalid SEED Answer (KEY) |
+| 7FXX78 | XX = Service - In progress |
+| 7F2231 | Configuration Read - Request out of range |
+| 7F2233 | Configuration Read - Security Access Denied |
+| 7F2712 | Unlocking - Subfunction not supported |
+| 7F2722 | Unlocking - Conditions not correct |
+| 7F2724 | Unlocking - Request Sequence Error |
+| 7F2736 | Unlocking - Exceeded number of attempts |
+| 7F2737 | Unlocking - Required time delay not expired |
+| 7F2713 | Unlocking - Invalid SEED Answer (KEY) |
 | 7F2E78 | Configuration Write in progress |
-| 7F2E13 | Failed Configuration Write - Invalid Zone data |
-| 7F2E7E | Failed Configuration Write - Unit is locked |
-| 7F2E31 | Failed Configuration Write - Not allowed operation |
-| 7F2EXX | Failed Configuration Write |
-| 7F2E31 | Failed Configuration Read - Not allowed operation |
-| 7F22XX | Failed Configuration Read |
-| 7FXXYY | Error - XX = Service / YY = Error Number |
+| 7F2E72 | Configuration Write - General Programming Failure |
+| 7F2E13 | Configuration Write - Invalid Zone data |
+| 7F2E7E | Configuration Write - Unit is locked |
+| 7F2E31 | Configuration Write - Request out of range |
+| 7F2EYY | Failed Configuration Write - YY = Response code |
+| 7F2E31 | Request out of range |
+| 7F22YY | Failed Configuration Read - YY = Response code |
+| 7FXXYY | Error - XX = Service / YY = Response code |
 
 ## KWP2000 Answers
 
@@ -190,6 +201,8 @@ CAN-BUS is limited to 8 bytes per frame, to send larger data PSA chose a simple 
 > Received frames could be out-of-order, ID must be used to append parts at the correct position into the final data whose size is known
 
 ## Calibration file (.cal / .ulp) explanation
+
+Type of file : **Motorola S-record - https://en.wikipedia.org/wiki/SREC_(file_format)**
 
 Every line of calibration files has this form:
 
