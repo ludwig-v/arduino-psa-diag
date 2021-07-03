@@ -155,10 +155,10 @@ Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/m
 
 After each configuration writing you must write **2901** zone for the so called "Secured Traceability" to avoid *B1003 DTC error* in the ECU
 
-| Command | Zone | Site | Signature | Day | Month | Year |
+| Command | Zone | [Site](https://github.com/ludwig-v/arduino-psa-diag/blob/master/SITES.md) | [Signature](https://github.com/ludwig-v/arduino-psa-diag/blob/master/SIGNATURES.md) | Day | Month | Year |
 | - | - | - | - | - | - | - |
-| 2E | 2901 | FD | C7B7E3 | 01 | 01 | 01 |
-| *Write* | *Traceability* | *Aftersales* | *Diagbox* | *01* | *January* | *2001* |
+| 2E | 2901 | FD | 000000 | 01 | 01 | 01 |
+| *Write* | *Traceability* | *Aftersales* | *Factory* | *01* | *January* | *2001* |
 
 Quick & dirty command that works everytime:
 
@@ -168,10 +168,10 @@ Quick & dirty command that works everytime:
 
 After each configuration writing you must write **A0** zone for the so called "Secured Traceability" to avoid *F303 DTC error* in the ECU
 
-| Command | Zone |  | Site | Signature | Day | Month | Year | Number of secured writings | Number of non-secured writings |
+| Command | Zone |  | [Site](https://github.com/ludwig-v/arduino-psa-diag/blob/master/SITES.md) | [Signature](https://github.com/ludwig-v/arduino-psa-diag/blob/master/SIGNATURES.md) | Day | Month | Year | Number of secured writings | Writing type |
 | - | - | - | - | - | - | - | - | - | - |
-| 3B | A0 | FF | FD | C7B7E3 | 01 | 01 | 01 | 00 | 00 |
-| *Write* | *Traceability* |  | *Aftersales* | *Diagbox* | *01* | *January* | *2001* | *0* | *0* |
+| 3B | A0 | FF | FD | 000000 | 01 | 01 | 01 | 00 | 00 |
+| *Write* | *Traceability* |  | *Aftersales* | *Factory* | *01* | *January* | *2001* | *0* | *0* |
 
 *Number of secured writings "should" be increased after each writing*
 
