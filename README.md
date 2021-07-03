@@ -151,6 +151,8 @@ Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/m
 
 ##  Secured Traceability
 
+### UDS
+
 After each configuration writing you must write **2901** zone for the so called "Secured Traceability" to avoid *B1003 DTC error* in the ECU
 
 | Command | Zone | Site | Signature | Day | Month | Year |
@@ -161,6 +163,19 @@ After each configuration writing you must write **2901** zone for the so called 
 Quick & dirty command that works everytime:
 
     2E2901FD000000010101
+
+### KWP
+
+After each configuration writing you must write **A0** zone for the so called "Secured Traceability" to avoid *F303 DTC error* in the ECU
+
+| Command | Zone |  | Site | Signature | Day | Month | Year |  |
+| - | - | - | - | - | - | - | - | - |
+| 3B | A0 | FF | FD | C7B7E3 | 01 | 01 | 01 | 0D00 |
+| *Write* | *Traceability* |  | *Aftersales* | *Diagbox* | *01* | *January* | *2001* |  |
+
+Quick & dirty command that works everytime:
+
+    3BA0FFFD0000000101010D00
 
 ## PSA Seed/Key algorithm
 
