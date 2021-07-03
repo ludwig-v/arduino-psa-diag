@@ -9,9 +9,18 @@ The serial console is used to send raw diagnostic frames, start it using 115200 
 You have to choose the ECU you want to communicate with by inputing its diagnostic frame IDs in hexadecimal:
 
     >CAN_EMIT_ID:CAN_RECV_ID
-Telematic unit access example:
+
+Telematic unit (UDS) access example:
 
     >764:664
+
+To access LIN ECUs (LIN over UDS) you must input diagnostic frame IDs in hexadecimal as well as ECU code
+
+DGT7CFF LVDS Screen (LIN) access example:
+
+    >736:716
+    L47
+
 Check out [ECU_LIST.md](https://github.com/ludwig-v/arduino-psa-diag/blob/master/ECU_LIST.md) inside the repo for other ECUs IDs pair
 
 ## Easy Unlock
