@@ -183,7 +183,7 @@ Quick & dirty command that works everytime:
 
 ## Diagnostic frames explanation / What the Sketch is doing
 
-CAN-BUS is limited to 8 bytes per frame, to send larger data PSA chose a simple algorythm to truncate the data into multiple parts
+CAN-BUS is limited to 8 bytes per frame, to send larger data ~~PSA~~ automotive industry via ISO 15765-2 chose a simple algorythm to truncate the data into multiple parts
 
 ### To send data smaller or equal to 7 bytes:
 #### [SEND] Frame:
@@ -199,7 +199,7 @@ CAN-BUS is limited to 8 bytes per frame, to send larger data PSA chose a simple 
 #### [RECEIVE] Write Acknowledgement Frame:
 | Byte 1 | Byte 2 | Byte 3 |
 |--|--|--|
-| 0x30 | 0x00 | 0x0A |
+| 0x30 | 0x00 | Delay between consecutive frames in ms |
 #### [SEND] Second Frame:
 ##### ID starting at 0x21 and increasing by 1 for every extra frame needed, after 0x2F reverting back to 0x20
 | Byte 1 | Byte 2 | Byte 3 | Byte 4 | Byte 5 | Byte 6 | Byte 7 | Byte 8 |
@@ -224,7 +224,7 @@ CAN-BUS is limited to 8 bytes per frame, to send larger data PSA chose a simple 
 #### [SEND] Read Acknowledgement Frame:
 | Byte 1 | Byte 2 | Byte 3 |
 |--|--|--|
-| 0x30 | 0x00 | 0x05 |
+| 0x30 | 0x00 | Delay between consecutive frames in ms |
 #### [SEND] Second Frame:
 ##### ID starting at 0x21 and increasing by 1 for every extra frame needed, after 0x2F reverting back to 0x20
 | Byte 1 | Byte 2 | Byte 3 | Byte 4 | Byte 5 | Byte 6 | Byte 7 | Byte 8 |
