@@ -168,14 +168,16 @@ Quick & dirty command that works everytime:
 
 After each configuration writing you must write **A0** zone for the so called "Secured Traceability" to avoid *F303 DTC error* in the ECU
 
-| Command | Zone |  | Site | Signature | Day | Month | Year |  |
-| - | - | - | - | - | - | - | - | - |
-| 3B | A0 | FF | FD | C7B7E3 | 01 | 01 | 01 | 0D00 |
-| *Write* | *Traceability* |  | *Aftersales* | *Diagbox* | *01* | *January* | *2001* |  |
+| Command | Zone |  | Site | Signature | Day | Month | Year | Number of secured writings | Number of non-secured writings |
+| - | - | - | - | - | - | - | - | - | - |
+| 3B | A0 | FF | FD | C7B7E3 | 01 | 01 | 01 | 00 | 00 |
+| *Write* | *Traceability* |  | *Aftersales* | *Diagbox* | *01* | *January* | *2001* | *0* | *0* |
+
+*Number of secured writings "should" be increased after each writing*
 
 Quick & dirty command that works everytime:
 
-    3BA0FFFD0000000101010D00
+    3BA0FFFD0000000101010000
 
 ## PSA Seed/Key algorithm
 
