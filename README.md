@@ -149,6 +149,19 @@ Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/m
 | 6782 | Unlocked successfully for download - Unit will be locked again if no command is issued within 5 seconds |
 | 6784 | Unlocked successfully for configuration - Unit will be locked again if no command is issued within 5 seconds |
 
+##  Secured Traceability
+
+After each configuration writing you must write **2901** zone for the so called "Secured Traceability" to avoid *B1003 DTC error* in the ECU
+
+| Command | Zone | Site | Signature | Day | Month | Year |
+| - | - | - | - | - | - | - |
+| 2E | 2901 | FD | C7B7E3 | 01 | 01 | 01 |
+| *Write* | *Traceability* | *Aftersales* | *Diagbox* | *01* | *January* | *2001* |
+
+Quick & dirty command that works everytime:
+
+    2E2901FD000000010101
+
 ## PSA Seed/Key algorithm
 
 [Algorithm can be found here with some example source code](https://github.com/ludwig-v/psa-seedkey-algorithm)
