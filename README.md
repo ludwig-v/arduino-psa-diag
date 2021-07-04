@@ -164,14 +164,25 @@ Quick & dirty command that works everytime:
 
     2E2901FD000000010101
 
+#### Writing counter
+
+Each time you write the traceability zone a counter in increased inside **C000** zone, this zone can't be rewrited
+
+    22C000
+
+| Command | Zone | Number of secured writings | Number of non-secured writings |
+| - | - | - | - |
+| 62 | C000 | 2A | 00 |
+| *Answer* | *Traceability* | *42* | *0* |
+
 ### KWP
 
 After each configuration writing you must write **A0** zone for the so called "Secured Traceability" to avoid *F303 DTC error* in the ECU
 
-| Command | Zone |  | [Site](https://github.com/ludwig-v/arduino-psa-diag/blob/master/SITES.md) | [Signature](https://github.com/ludwig-v/arduino-psa-diag/blob/master/SIGNATURES.md) | Day | Month | Year | Number of secured writings | Writing type |
+| Command | Zone |  | [Site](https://github.com/ludwig-v/arduino-psa-diag/blob/master/SITES.md) | [Signature](https://github.com/ludwig-v/arduino-psa-diag/blob/master/SIGNATURES.md) | Day | Month | Year | Number of secured writings | Number of non-secured writings |
 | - | - | - | - | - | - | - | - | - | - |
-| 3B | A0 | FF | FD | 000000 | 01 | 01 | 01 | 00 | 00 |
-| *Write* | *Traceability* |  | *Aftersales* | *Factory* | *01* | *January* | *2001* | *0* | *0* |
+| 3B | A0 | FF | FD | 000000 | 01 | 01 | 01 | 2A | 00 |
+| *Write* | *Traceability* |  | *Aftersales* | *Factory* | *01* | *January* | *2001* | *42* | *0* |
 
 *Number of secured writings "should" be increased after each writing*
 
