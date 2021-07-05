@@ -6,6 +6,7 @@
 | F080 | ZA Zone |
 | F190 | VIN |
 | F18C | Serial number |
+| F18B | Manufacturing date |
 | 2100 | Telecoding_Fct_AAS |
 | 2101 | Telecoding_Fct_AFIL |
 | 1234 | HU_CODING_ADDONS |
