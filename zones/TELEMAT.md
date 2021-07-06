@@ -44,6 +44,7 @@
 | 2128 | Telecoding_Fct_SPY |
 | 2127 | Telecoding_Fct_IHM |
 | 2116 | Telecoding_Fct_NAV |
+| 2901 | [Secured Traceability](https://github.com/ludwig-v/arduino-psa-diag#secured-traceability) |
 | 0100 | Calibration_Fct_AAS |
 | 0105 | Calibration_Fct_AVR |
 | 0106 | Calibration_Fct_BT |
@@ -103,14 +104,19 @@
 |--|--|
 | FE | ZI Zone (Last 6 characters: current calibration) |
 | 80 | ZA Zone |
+| A0 | [Secured Traceability](https://github.com/ludwig-v/arduino-psa-diag#secured-traceability) |
 | B0 | VIN |
 | 82 | Serial number |
-| A0 | ? (SMEG) |
 | B1 | ? (AIO) |
 | B2 | ? (SMEG, AIO) |
 | B3 | Personalization menus (SMEG) |
 | B5 | ? (SMEG) |
+| B8 | ? (SMEG) |
 | B9 | ? (SMEG) |
 | C0 | ? (SMEG) |
+| C6 | ? (SMEG) |
+| CC | ? (SMEG) |
+| CF | ? (SMEG) |
+| BE | ? (SMEG) |
 | D0 | Display details - Part number, Software (SMEG) |
 | BC | GPS Measures (SMEG) |

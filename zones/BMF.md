@@ -197,6 +197,7 @@
 | 2448 | Heated steering wheel |
 | 245C | Voltage regulator (DMTR) read presence |
 | 247C | Diagnostic algorithm version for brake sensor |
+| 2901 | [Secured Traceability](https://github.com/ludwig-v/arduino-psa-diag#secured-traceability) |
 | D400 | Present groups list |
 | D401 | "User visibility" data list |
 | D402 | "User visibility" data values |
