@@ -62,7 +62,7 @@ Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/m
 | 3103FF04 | Empty ZI Zone (Unit must be unlocked first) |
 | 3483110000 | Prepare ZI zone writing (Unit must be unlocked first) |
 
-## KWP2000 Commands
+## KWP2000 (HAB - 125Kbits) Commands
 
 | Command | Description |
 |--|--|
@@ -79,9 +79,25 @@ Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/m
 | 2784XXXXXXXX  | Unlocking response for configuration - XXXXXXXX = KEY - Must be given within 5 seconds after seed generation |
 | 21XX | Read Zone XX (1 byte) |
 | 3BXXYYYYYYYYYYYY | Write Zone XX with data YYYYYYYYYYYY (Unit must be unlocked first) |
-| 318181F05A | Empty flash memory (Unit must be unlocked first) |
-| 318101 | Empty flash memory (Unit must be unlocked first) |
-| 348100000D07 | Prepare flash writing (Unit must be unlocked first) |
+| 318181F05A | Empty flash memory for .cal upload (Unit must be unlocked first) |
+| 318101 | Empty flash memory for .cal upload (Unit must be unlocked first) |
+| 348100000D07 | Prepare flash writing for .cal upload (Unit must be unlocked first) |
+
+## KWP2000 (IS - 500Kbits) Commands
+
+| Command | Description |
+|--|--|
+| 3E | Keep-Alive session |
+| 17FF00 | List of current faults |
+| 14FF00 | Clear faults |
+| 82 | End of communication |
+| 81 | Open Diagnostic session |
+| 2781 | Unlocking service for download (Diagnostic session must be enabled first) - SEED |
+| 2783 | Unlocking service for configuration (Diagnostic session must be enabled first) - SEED |
+| 2782XXXXXXXX  | Unlocking response for download - XXXXXXXX = KEY - Must be given within 5 seconds after seed generation |
+| 2784XXXXXXXX  | Unlocking response for configuration - XXXXXXXX = KEY - Must be given within 5 seconds after seed generation |
+| 21XX | Read Zone XX (1 byte) |
+| 34XXYYYYYYYYYYYY | Write Zone XX with data YYYYYYYYYYYY (Unit must be unlocked first) |
 
 ## UDS Answers
 
@@ -134,7 +150,7 @@ Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/m
 | 7F22YY | Failed Configuration Read - YY = Response code |
 | 7FXXYY | Error - XX = Service / YY = Response code |
 
-## KWP2000 Answers
+## KWP2000 (HAB - 125Kbits) Answers
 
 | Answer | Description |
 |--|--|
@@ -143,6 +159,21 @@ Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/m
 | 50C0 | Diagnostic session opened |
 | 71A801 | Reboot |
 | 71A802 | Reboot 2 |
+| 57XXYYYYZZ | XX = Number of DTC, YYYY = DTC code, ZZ = DTC data |
+| 61XXYYYYYYYYYYYY  | Successfull read of Zone XX - YYYYYYYYYYYY = DATA |
+| 6781XXXXXXXX | Seed generated for download - XXXXXXXX = SEED |
+| 6783XXXXXXXX | Seed generated for configuration - XXXXXXXX = SEED |
+| 6782 | Unlocked successfully for download - Unit will be locked again if no command is issued within 5 seconds |
+| 6784 | Unlocked successfully for configuration - Unit will be locked again if no command is issued within 5 seconds |
+
+## KWP2000 (IS - 500Kbits) Answers
+
+| Answer | Description |
+|--|--|
+| 7E | Keep-Alive reply |
+| C2 | Communication closed |
+| C1XXXX | Diagnostic session opened |
+| 57XXYYYYZZ | XX = Number of DTC, YYYY = DTC code, ZZ = DTC data |
 | 61XXYYYYYYYYYYYY  | Successfull read of Zone XX - YYYYYYYYYYYY = DATA |
 | 6781XXXXXXXX | Seed generated for download - XXXXXXXX = SEED |
 | 6783XXXXXXXX | Seed generated for configuration - XXXXXXXX = SEED |
