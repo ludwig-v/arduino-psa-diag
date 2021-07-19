@@ -4,5 +4,5 @@
 |--|--|
 | 000000 | Factory |
 | C7B7E3 | Diagbox |
-| 00FBFB | Technical Team |
+| FBFBFB | Technical Team |
 | FFFFFF | Virgin |

@@ -80,7 +80,7 @@ Wait until you get the response 741000
 #### For S1 frame:
 | Command | Detail |
 |--|--|
-| 3601 XX 0000 YYYY FFFFFF VVVVVVVV TTTTTT SSSSSSSS NN KKKKKK FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5C CCCC | XX = Data[2] = Flash address / YYYY = Data[8] Data[9] / VVVVVVVV = Data[10] Data[11] Data[12] Data[13] / TTTTTT = Date of the download DD MM YY or 000000 for empty date / SSSSSSSS = FDC7B7E3 = Diagbox signature / NN = Number of downloads, "should" be increased / KKKKKK = Data[14] Data[15] Data[16] = Calibration number / CCCC = _CRC-16/X-25_(XX 0000 YYYY FFFFFF VVVVVVVV TTTTTT SSSSSSSS NN KKKKKK FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5C) |
+| 3601 XX 0000 YYYY FFFFFF VVVVVVVV TTTTTT PP SSSSSS NN KKKKKK FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5C CCCC | XX = Data[2] = Flash address / YYYY = Data[8] Data[9] / VVVVVVVV = Data[10] Data[11] Data[12] Data[13] / TTTTTT = Date of the download DD MM YY or 000000 for empty date / PP = [Site](https://github.com/ludwig-v/arduino-psa-diag/blob/master/SITES.md) / SSSSSS = [Signature](https://github.com/ludwig-v/arduino-psa-diag/blob/master/SIGNATURES.md) / NN = Number of downloads, "should" be increased / KKKKKK = Data[14] Data[15] Data[16] = Calibration number / CCCC = _CRC-16/X-25_(XX 0000 YYYY FFFFFF VVVVVVVV TTTTTT SSSSSSSS NN KKKKKK FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5C) |
 
 Wait until you get the response 760102
 
