@@ -108,4 +108,4 @@
 | 107 | 6B | LG Electonics Inc |
 | 108 | 6C | Sojadis |
 | 109 | 6D | KYB |
-| 110 | 6E | Huwaei |
+| 110 | 6E | Huawei |
