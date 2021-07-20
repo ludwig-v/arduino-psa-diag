@@ -364,6 +364,8 @@ Type of file : **Motorola S-record - https://en.wikipedia.org/wiki/SREC_(file_fo
 | **SOFTWARE_EDITION** | FF.XX |
 | **CAL_NUMBER** | 96 XXXXXX 80 |
 
+Checksums have to be computed by converting HEXADECIMAL to BINARY
+
 ## Dump Mode
 
 This sketch also provides a way to dump Diagbox frames (read & write) very easily, it is merging split CAN-BUS frames together to have a clean and "human readable" output. Just enable it this way in the source code:
