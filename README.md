@@ -285,26 +285,84 @@ CAN-BUS is limited to 8 bytes per frame, to send larger data ~~PSA~~ automotive 
 
 Type of file : **Motorola S-record - https://en.wikipedia.org/wiki/SREC_(file_format)**
 
-Every line of calibration files has this form:
+*1h = 1 HEX Byte or 2 characters in the .cal/.ulp file*
 
-### Content Size
+### Content Size (S2 frames - Zones data block)
 | TYPE | LENGTH | ADDRESS | LENGTH2 | ZONE | DATA | CHECKSUM | CHECKSUM2 |
 |--|--|--|--|--|--|--|--|
-| 1h | 1h | Variable Length | 1h | 2h | Variable Length | 2h| 1h |
+| 1h | 1h | 3h | 2h | 2h | Variable Length | 2h | 1h |
 
-1h = 1 HEX Byte or 2 characters in the .cal file
+### Content Size (S3 frames - Binary data block)
+| TYPE | LENGTH | ADDRESS | LENGTH2 | DATA | CHECKSUM | CHECKSUM2 |
+|--|--|--|--|--|--|--|
+| 1h | 1h | 4h | 2h | Variable Length | 2h | 1h |
+
+### Special frames
+
+#### S0 (Hardware info)
+
+| TYPE | LENGTH | NOT_USED | FAMILY_CODE | ISO_LINE | INTERBYTE_TX | INTERBYTE_RX | INTER_TXRX | INTER_RXTX | CAL_TYPE | LOGICAL_MARK | K_LINE_MANAGEMENT | CHECKSUM2 |
+|--|--|--|--|--|--|--|--|--|--|--|--|--|
+| 1h | 1h | 2h | 1h | 1h | 1h | 1h | 1h | 1h | 1h | 1h | 2h | 1h |
+
+#### S1 (Identification Zone - ZI)
+
+| TYPE | LENGTH | NOT_USED | FLASH_SIGNATURE | [UNLOCK_KEY](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/main/ECU_KEYS.md) | [SUPPLIER](https://github.com/ludwig-v/arduino-psa-diag/blob/master/ECU_SUPPLIERS.md) | SYSTEM | APPLICATION | SOFTWARE_VERSION | SOFTWARE_EDITION | CAL_NUMBER | CHECKSUM2 |
+|--|--|--|--|--|--|--|--|--|--|--|--|
+| 1h | 1h | 2h | 2h | 1h | 1h | 1h | 1h | 1h | 2h | 3h | 1h |
+
+#### S5 (Optional control frame - Number of frames in previous data block)
+
+| TYPE | LENGTH | NB_FRAMES | CHECKSUM2 |
+|--|--|--|--|
+| 1h | 1h | Variable Length | 1h |
+
+#### S7 (End of S3 frames data block)
+
+| TYPE | LENGTH | ADDRESS | CHECKSUM2 |
+|--|--|--|--|
+| 1h | 1h | Optional | 1h |
+
+#### S8 (End of S2 frames data block)
+
+| TYPE | LENGTH | ADDRESS | CHECKSUM2 |
+|--|--|--|--|
+| 1h | 1h | Optional | 1h |
+
+#### S9 (End of S1 frame data block)
+
+| TYPE | LENGTH | ADDRESS | CHECKSUM2 |
+|--|--|--|--|
+| 1h | 1h | Optional | 1h |
 
 ### Content Data
 | Line Part | Line Detail |
 |--|--|
-| **TYPE** | S1 = ZI Zone / S2 / S8 |
+| **TYPE** | S0 = Hardware info / S1 = ZI Zone / S2 / S3 / S8 |
 | **LENGTH** | Hex Length of ADDRESS+ZONE+DATA+CHECKSUM+CHECKSUM2 |
-| **ADDRESS** |  |
-| **LENGTH2** | Hex Length of ZONE+DATA+CHECKSUM  |
+| **ADDRESS** | 16bits / 24bits / 32bits |
+| **LENGTH2** | Hex Length of ZONE+DATA+CHECKSUM |
 | **ZONE** |  |
-| **DATA** |   |
+| **DATA** |  |
 | **CHECKSUM** | *CRC-16/X-25*(DATA) with this order CRC[1] CRC[0] |
 | **CHECKSUM2** | *CRC-8/2s_complement*(ADDRESS+ZONE+DATA+CHECKSUM) - 1 |
+| **FAMILY_CODE** | Family Code |
+| **ISO_LINE** | 00h: CAN / 01h: LIN / 05h: ISO 5 / 08h: ISO 8 |
+| **INTERBYTE_TX** | Delay between bytes sending (0.1ms step) |
+| **INTERBYTE_RX** | Delay between bytes receiving (0.1ms step) |
+| **INTER_TXRX** | Delay between sent and received frames (1ms step) |
+| **INTER_RXTX** | Delay between received and sent frames (1ms step) |
+| **CAL_TYPE** | 81h: .cal / 82h: .ulp / 92h: .ulp new gen |
+| **LOGICAL_MARK** |  |
+| **K_LINE_MANAGEMENT** | 0000h: yes / 0FXXh: no, timeout of XXs |
+| **FLASH_SIGNATURE** | Flash Signature |
+| **[UNLOCK_KEY](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/main/ECU_KEYS.md)** | ECU Unlock key |
+| **[SUPPLIER](https://github.com/ludwig-v/arduino-psa-diag/blob/master/ECU_SUPPLIERS.md)** | Supplier ID |
+| **SYSTEM** |  |
+| **APPLICATION** |  |
+| **SOFTWARE_VERSION** |  |
+| **SOFTWARE_EDITION** | FF.XX |
+| **CAL_NUMBER** | 96 XXXXXX 80 |
 
 ## Dump Mode
 
