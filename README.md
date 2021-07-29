@@ -3,12 +3,14 @@
 Arduino sketch to send diagnostic frames to PSA cars
 
 ## How to use
-The serial console is used to send raw diagnostic frames, start it using 115200 baud rate
+The serial console is used to send raw diagnostic frames, start it using **115200 baud** rate. The sketch is meant to be used with line feed (LF) - new line - and **without** carriage return (CR) for each command.
 
 ## Choose ECU
 You have to choose the ECU you want to communicate with by inputing its diagnostic frame IDs in hexadecimal:
 
     >CAN_EMIT_ID:CAN_RECV_ID
+
+### Examples
 
 Telematic unit (UDS) access example:
 
@@ -196,6 +198,14 @@ Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/m
 | 6783XXXXXXXX | Seed generated for configuration - XXXXXXXX = SEED |
 | 6782 | Unlocked successfully for download - Unit will be locked again if no command is issued within 5 seconds |
 | 6784 | Unlocked successfully for configuration - Unit will be locked again if no command is issued within 5 seconds |
+
+## Sketch Errors
+
+| Answer | Description | Possible reasons |
+| - | - | - |
+| 7F0000 | Invalid Length | Space at the end of the command ? Carriage return (CR) enabled ? |
+| 7F3E03 | ECU Connection lost | No resistor ? CAN-BUS wires bad ? |
+| None | | CS_PIN_CAN0 correctly setup ? CAN_FREQ correctly setup ? |
 
 ##  Secured Traceability
 
