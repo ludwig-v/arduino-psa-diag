@@ -1,6 +1,6 @@
 ## Signature for Secured Traceability
 
-| Value | Detail |
+| Value (HEX) | Detail |
 |--|--|
 | 000000 | Factory |
 | C7B7E3 | Diagbox |

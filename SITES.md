@@ -1,6 +1,6 @@
 ## Site for Secured Traceability
 
-| Value | Detail |
+| Value (HEX) | Detail |
 |--|--|
 | 00 | Factory |
 | FB | Independent Repairer |
