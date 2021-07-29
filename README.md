@@ -301,7 +301,7 @@ Type of file : **Motorola S-record - https://en.wikipedia.org/wiki/SREC_(file_fo
 
 #### S0 (Hardware info)
 
-| TYPE | LENGTH | NOT_USED | FAMILY_CODE | ISO_LINE | INTERBYTE_TX | INTERBYTE_RX | INTER_TXRX | INTER_RXTX | CAL_TYPE | LOGICAL_MARK | K_LINE_MANAGEMENT | CHECKSUM2 |
+| TYPE | LENGTH | NOT_USED | [FAMILY_MUX_CODE](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/main/ECU_FAMILIES.md) | ISO_LINE | INTERBYTE_TX | INTERBYTE_RX | INTER_TXRX | INTER_RXTX | CAL_TYPE | LOGICAL_MARK | K_LINE_MANAGEMENT | CHECKSUM2 |
 |--|--|--|--|--|--|--|--|--|--|--|--|--|
 | 1h | 1h | 2h | 1h | 1h | 1h | 1h | 1h | 1h | 1h | 1h | 2h | 1h |
 
@@ -346,7 +346,7 @@ Type of file : **Motorola S-record - https://en.wikipedia.org/wiki/SREC_(file_fo
 | **DATA** |  |
 | **CHECKSUM** | *CRC-16/X-25*(DATA) with this order CRC[1] CRC[0] |
 | **CHECKSUM2** | *CRC-8/2s_complement*(ADDRESS+ZONE+DATA+CHECKSUM) - 1 |
-| **FAMILY_CODE** | Family Code |
+| **[FAMILY_MUX_CODE](https://github.com/ludwig-v/arduino-psa-diag/blob/master/ECU_FAMILIES.md)** | Family Code |
 | **ISO_LINE** | 00h: CAN / 01h: LIN / 05h: ISO 5 / 08h: ISO 8 |
 | **INTERBYTE_TX** | Delay between bytes sending (0.1ms step) |
 | **INTERBYTE_RX** | Delay between bytes receiving (0.1ms step) |
