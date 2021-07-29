@@ -301,7 +301,7 @@ Type of file : **Motorola S-record - https://en.wikipedia.org/wiki/SREC_(file_fo
 
 #### S0 (Hardware info)
 
-| TYPE | LENGTH | NOT_USED | [FAMILY_MUX_CODE](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/main/ECU_FAMILIES.md) | ISO_LINE | INTERBYTE_TX | INTERBYTE_RX | INTER_TXRX | INTER_RXTX | CAL_TYPE | LOGICAL_MARK | K_LINE_MANAGEMENT | CHECKSUM2 |
+| TYPE | LENGTH | NOT_USED | [FAMILY_MUX_CODE](https://github.com/ludwig-v/arduino-psa-diag/blob/master/ECU_FAMILIES.md) | ISO_LINE | INTERBYTE_TX | INTERBYTE_RX | INTER_TXRX | INTER_RXTX | CAL_TYPE | LOGICAL_MARK | K_LINE_MANAGEMENT | CHECKSUM2 |
 |--|--|--|--|--|--|--|--|--|--|--|--|--|
 | 1h | 1h | 2h | 1h | 1h | 1h | 1h | 1h | 1h | 1h | 1h | 2h | 1h |
 
