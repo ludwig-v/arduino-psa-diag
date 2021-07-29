@@ -24,13 +24,30 @@ DGT7CFF LVDS Screen (LIN) access example:
 Check out [ECU_LIST.md](https://github.com/ludwig-v/arduino-psa-diag/blob/master/ECU_LIST.md) inside the repo for other ECUs IDs pair
 
 ## Easy Unlock
-Once you are on the chosen ECU you can unlock writing easily using this shortcut:
+Once you are on the chosen ECU you can unlock it easily using this shortcut:
 
     :UNLOCK_KEY:UNLOCK_SERVICE:DIAG_SESSION_ID
-NAC Telematic unit (**UDS**) unlock example:
+
+### Explanation
+
+| UNLOCK_SERVICE (HEX) | Protocol | Detail | *Equivalent command* |
+| - | - | - | - |
+| 01 | UDS | Download | *2701* |
+| 03 | UDS | Coding | *2703* |
+| 83 | KWP | Download/Coding | *2783* |
+
+| DIAG_SESSION_ID (HEX) | Protocol | Detail | *Equivalent command* |
+| - | - | - | - |
+| 02 | UDS | Download | *1002* |
+| 03 | UDS | Coding | *1003* |
+| C0 | KWP | Download/Coding | *10C0* |
+
+### Examples
+
+NAC Telematic unit (**UDS**) unlock for coding example:
 
     :D91C:03:03
-AMPLI_AUDIO Amplifier unit (**KWP**) unlock example:
+AMPLI_AUDIO Amplifier unit (**KWP**) unlock for coding example:
 
     :A7D8:83:C0
 Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/main/ECU_KEYS.md) for other ECUs keys
