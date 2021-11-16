@@ -1,6 +1,6 @@
 /*
 Copyright 2020-2021, Ludwig V. <https://github.com/ludwig-v>
-Date: 2021-03-06
+Date: 2021-11-16
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ all copies or substantial portions of the Software.
 //  Configuration  //
 /////////////////////
 
-#define SKETCH_VERSION "1.6"
+#define SKETCH_VERSION "1.7"
 #define CAN_RCV_BUFFER 40
 #define CAN_DEFAULT_DELAY 5 // Delay between multiframes
 #define MAX_DATA_LENGTH 512
@@ -39,6 +39,7 @@ all copies or substantial portions of the Software.
 #define SERIAL_SPEED 115200
 #define CAN_SPEED CAN_125KBPS // Entertainment CAN bus - Low Speed
 #define CAN_FREQ MCP_16MHZ // Switch to 8MHZ if you have a 8Mhz module
+#define GETSEED_MAX_ATTEMPTS 8
 
 ////////////////////
 // Initialization //
@@ -72,6 +73,7 @@ byte LIN = 0;
 bool waitingReplySerialCMD = false;
 unsigned long lastCMDSent = 0;
 bool waitingUnlock = false;
+byte getSeedAttempts = 0;
 unsigned short UnlockKey = 0x0000;
 byte UnlockService = 0x00;
 char UnlockCMD[5];
@@ -389,7 +391,7 @@ void sendAdditionalDiagFrames() {
   return;
 }
 
-void sendDiagFrame(char * data, int frameFullLen) {
+void sendDiagFrame(char * data, int frameFullLen, bool Raw) {
   int i = 0;
   int frameLen = 0;
   byte tmpFrame[8] = {0,0,0,0,0,0,0,0};
@@ -409,7 +411,7 @@ void sendDiagFrame(char * data, int frameFullLen) {
     }
   }
 
-  if (LIN > 0) {
+  if (LIN > 0 && !Raw) {
     if (frameLen > 6) { // Multi-frames
       diagFrame.data[0] = LIN;
       diagFrame.data[1] = 0x10;
@@ -439,7 +441,7 @@ void sendDiagFrame(char * data, int frameFullLen) {
       receiveDiagDataPos = receiveDiagFrameRead = 0;
     }
   } else {
-    if (frameLen > 7) { // Multi-frames
+    if (frameLen > 7 && !Raw) { // Multi-frames
       diagFrame.data[0] = 0x10;
       diagFrame.data[1] = (frameFullLen / 2);
       diagFrame.data[2] = tmpFrame[0];
@@ -453,16 +455,28 @@ void sendDiagFrame(char * data, int frameFullLen) {
       additionalFrameID = 0x21;
     } else {
 
-      diagFrame.data[0] = frameLen;
-      diagFrame.data[1] = tmpFrame[0];
-      diagFrame.data[2] = tmpFrame[1];
-      diagFrame.data[3] = tmpFrame[2];
-      diagFrame.data[4] = tmpFrame[3];
-      diagFrame.data[5] = tmpFrame[4];
-      diagFrame.data[6] = tmpFrame[5];
-      diagFrame.data[7] = tmpFrame[6];
+      if (Raw) {
+        diagFrame.data[0] = tmpFrame[0];
+        diagFrame.data[1] = tmpFrame[1];
+        diagFrame.data[2] = tmpFrame[2];
+        diagFrame.data[3] = tmpFrame[3];
+        diagFrame.data[4] = tmpFrame[4];
+        diagFrame.data[5] = tmpFrame[5];
+        diagFrame.data[6] = tmpFrame[6];
+        diagFrame.data[7] = tmpFrame[7];
+      } else {
+        diagFrame.data[0] = frameLen;
+        diagFrame.data[1] = tmpFrame[0];
+        diagFrame.data[2] = tmpFrame[1];
+        diagFrame.data[3] = tmpFrame[2];
+        diagFrame.data[4] = tmpFrame[3];
+        diagFrame.data[5] = tmpFrame[4];
+        diagFrame.data[6] = tmpFrame[5];
+        diagFrame.data[7] = tmpFrame[6];
 
-      frameLen = frameLen + 1;
+        frameLen = frameLen + 1;
+      }
+
       additionalFrameID = 0x00;
 
       receiveDiagDataPos = receiveDiagFrameRead = 0;
@@ -577,7 +591,7 @@ void recvWithTimeout() {
         char diagCMD[5] = "10";
         snprintf(tmp, 3, "%02X", DiagSess);
         strcat(diagCMD, tmp);
-        sendDiagFrame(diagCMD, strlen(diagCMD));
+        sendDiagFrame(diagCMD, strlen(diagCMD), false);
 
         if (DiagSess == 0xC0) { // KWP
           sendKeepAliveType = 'K';
@@ -623,12 +637,21 @@ void recvWithTimeout() {
         Serial.print(":");
         snprintf(tmp, 4, "%02X", CAN_RECV_ID);
         Serial.println(tmp);
-      } else if ((receiveDiagFrameRead - 1) % 2) {
+      } else if (receiveDiagFrameData[0] == '#' && receiveDiagFrameRead <= (16 + 1) && (receiveDiagFrameRead - 1) % 2 == 0) { // Send RAW frames
+        char tmpFrame[16];
+        for (int i = 1; i < receiveDiagFrameRead && i <= 16; i++) {
+          tmpFrame[i - 1] = receiveDiagFrameData[i];
+        }
+        sendDiagFrame(tmpFrame, receiveDiagFrameRead - 1, true);
+
+        waitingReplySerialCMD = true;
+        lastCMDSent = millis();
+      } else if (receiveDiagFrameRead % 2 == 0) {
         char tmpFrame[16];
         for (int i = 0; i < receiveDiagFrameRead && i < 16; i++) {
           tmpFrame[i] = receiveDiagFrameData[i];
         }
-        sendDiagFrame(tmpFrame, receiveDiagFrameRead);
+        sendDiagFrame(tmpFrame, receiveDiagFrameRead, false);
 
         waitingReplySerialCMD = true;
         lastCMDSent = millis();
@@ -701,11 +724,11 @@ void parseCAN() {
 
         bool encap = false;
         if (canMsgRcvBuffer[t].data[0] >= 0x40) { // UDS or KWP with LIN ECUs, remove encapsulation
-            for (int i = 1; i < canMsgRcvBuffer[t].can_dlc; i++) {
-                canMsgRcvBuffer[t].data[i - 1] = canMsgRcvBuffer[t].data[i];
-            }
-            canMsgRcvBuffer[t].can_dlc--;
-            encap = true;
+          for (int i = 1; i < canMsgRcvBuffer[t].can_dlc; i++) {
+            canMsgRcvBuffer[t].data[i - 1] = canMsgRcvBuffer[t].data[i];
+          }
+          canMsgRcvBuffer[t].can_dlc--;
+          encap = true;
         }
 
         int len = canMsgRcvBuffer[t].can_dlc;
@@ -824,25 +847,33 @@ void parseCAN() {
           }
         }
 
-        if (sendKeepAlives && lastKeepAliveReceived > 0 && millis() - lastKeepAliveReceived >= 1000) { // ECU connection lost, no answer
-          Serial.println("7F3E03"); // Custom error
-
-          sendKeepAlives = false; // Stop sending Keep-Alives
-        }
-
         if (canMsgRcvBuffer[t].data[0] < 0x10 && (canMsgRcvBuffer[t].data[1] == 0x7F || (lastCMDSent > 0 && millis() - lastCMDSent >= 1000))) { // Error / No answer
           if (canMsgRcvBuffer[t].data[2] == 0x3E) {
             sendKeepAlives = false; // Stop sending Keep-Alives
           }
-          waitingUnlock = false;
-          waitingReplySerialCMD = false;
-          lastCMDSent = 0;
+          if (waitingUnlock && canMsgRcvBuffer[t].data[1] == 0x7F && canMsgRcvBuffer[t].data[2] == 0x27 && canMsgRcvBuffer[t].data[3] != 0x37) {
+            waitingUnlock = false;
+          }
+          if (waitingUnlock && getSeedAttempts <= GETSEED_MAX_ATTEMPTS) {
+            if (lastCMDSent > 0 && millis() - lastCMDSent >= 2000) {
+              sendDiagFrame(UnlockCMD, strlen(UnlockCMD), false);
+              lastCMDSent = millis();
+              getSeedAttempts++;
+            }
+          } else {
+            waitingUnlock = false;
+            waitingReplySerialCMD = false;
+            lastCMDSent = 0;
+            getSeedAttempts = 0;
+          }
         } else if (waitingUnlock && canMsgRcvBuffer[t].data[0] < 0x10 && canMsgRcvBuffer[t].data[1] == 0x50 && canMsgRcvBuffer[t].data[2] == DiagSess) {
-          sendDiagFrame(UnlockCMD, strlen(UnlockCMD));
+          sendDiagFrame(UnlockCMD, strlen(UnlockCMD), false);
+          lastCMDSent = millis();
         }
 
         if (sendKeepAlives && lastKeepAliveReceived > 0 && millis() - lastKeepAliveReceived >= 1000) { // ECU connection lost, no answer
-          Serial.println("7F3E03"); // Custom error, keep-alive error
+          Serial.println("7F3E03"); // Custom error
+
           sendKeepAlives = false; // Stop sending Keep-Alives
         }
 
@@ -873,7 +904,7 @@ void parseCAN() {
             Serial.println(UnlockCMD_Seed);
           }
 
-          sendDiagFrame(UnlockCMD_Seed, strlen(UnlockCMD_Seed));
+          sendDiagFrame(UnlockCMD_Seed, strlen(UnlockCMD_Seed), false);
 
           waitingUnlock = false;
         }
