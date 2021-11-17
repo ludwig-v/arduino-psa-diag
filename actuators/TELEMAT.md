@@ -12,14 +12,14 @@
 | 2FD6700340 | 180° Camera display control - Zoom view |	
 | 2FD6700350 | 180° Camera display control - Lateral view |	
 | 2FD62000 | Stop Sound Test |	
-| 082FD620030108 | Sound test Front Right |	
-| 082FD62003010A | Sound test Front Right |	
-| 082FD620030208 | Sound test Front Left |	
-| 082FD62003020A | Sound test Front Left |	
-| 082FD620030308 | Sound test Back Right |	
-| 082FD62003030A | Sound test Back Right |	
-| 082FD620030308 | Sound test Back Left |	
-| 082FD62003030A | Sound test Back Left |	
+| 2FD620030108 | Sound test Front Right |	
+| 2FD62003010A | Sound test Front Right |	
+| 2FD620030208 | Sound test Front Left |	
+| 2FD62003020A | Sound test Front Left |	
+| 2FD620030308 | Sound test Back Right |	
+| 2FD62003030A | Sound test Back Right |	
+| 2FD620030308 | Sound test Back Left |	
+| 2FD62003030A | Sound test Back Left |	
 
 
 ## Test Commands (SMEG/AIO/MRN)	
