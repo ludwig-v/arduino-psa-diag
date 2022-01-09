@@ -1,6 +1,6 @@
 /*
-Copyright 2020-2021, Ludwig V. <https://github.com/ludwig-v>
-Date: 2021-11-16
+Copyright 2020-2022, Ludwig V. <https://github.com/ludwig-v>
+Date: 2022-01-09
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ all copies or substantial portions of the Software.
 //  Configuration  //
 /////////////////////
 
-#define SKETCH_VERSION "1.7"
+#define SKETCH_VERSION "1.8"
 #define CAN_RCV_BUFFER 40
 #define CAN_DEFAULT_DELAY 5 // Delay between multiframes
 #define MAX_DATA_LENGTH 512
@@ -681,7 +681,7 @@ void parseCAN() {
         int id = canMsgRcvBuffer[t].can_id;
 
         bool encap = false;
-        if (canMsgRcvBuffer[t].data[0] >= 0x40) { // UDS or KWP with LIN ECUs, remove encapsulation
+        if (canMsgRcvBuffer[t].data[0] >= 0x40 && canMsgRcvBuffer[t].data[0] <= 0x70) { // UDS or KWP with LIN ECUs, remove encapsulation
           for (int i = 1; i < canMsgRcvBuffer[t].can_dlc; i++) {
             canMsgRcvBuffer[t].data[i - 1] = canMsgRcvBuffer[t].data[i];
           }
@@ -707,7 +707,7 @@ void parseCAN() {
 
             waitingReplySerialCMD = false;
             lastCMDSent = 0;
-          } else if (len > 2 && canMsgRcvBuffer[t].data[0] >= 0x10 && canMsgRcvBuffer[t].data[0] <= 0x15) { // Acknowledgement Read
+          } else if (len > 2 && canMsgRcvBuffer[t].data[0] >= 0x10 && canMsgRcvBuffer[t].data[0] <= 0x18) { // Acknowledgement Read
             receiveDiagFrameSize = ((canMsgRcvBuffer[t].data[0] - 0x10) * 256) + canMsgRcvBuffer[t].data[1];
 
             if (waitingReplySerialCMD && LIN) {
@@ -764,7 +764,7 @@ void parseCAN() {
 
               waitingReplySerialCMD = false;
               lastCMDSent = 0;
-            } else if (len > 2 && canMsgRcvBuffer[t].data[0] >= 0x10 && canMsgRcvBuffer[t].data[0] <= 0x15) { // Acknowledgement Read
+            } else if (len > 2 && canMsgRcvBuffer[t].data[0] >= 0x10 && canMsgRcvBuffer[t].data[0] <= 0x18) { // Acknowledgement Read
               receiveDiagFrameSize = ((canMsgRcvBuffer[t].data[0] - 0x10) * 256) + canMsgRcvBuffer[t].data[1];
 
               if (waitingReplySerialCMD && LIN) {
