@@ -1,6 +1,6 @@
 /*
 Copyright 2020-2022, Ludwig V. <https://github.com/ludwig-v>
-Date: 2022-01-09
+Date: 2022-01-10
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -31,9 +31,9 @@ all copies or substantial portions of the Software.
 //  Configuration  //
 /////////////////////
 
-#define SKETCH_VERSION "1.8"
+#define SKETCH_VERSION "1.9"
 #define CAN_RCV_BUFFER 40
-#define CAN_DEFAULT_DELAY 5 // Delay between multiframes
+#define CAN_DEFAULT_DELAY 4 // Delay between multiframes
 #define MAX_DATA_LENGTH 512
 #define CS_PIN_CAN0 10
 #define SERIAL_SPEED 115200
@@ -81,6 +81,7 @@ char SketchVersion[4];
 byte framesDelayInput = CAN_DEFAULT_DELAY;
 byte framesDelay = CAN_DEFAULT_DELAY;
 
+bool customFrameSize = false;
 int sendingAdditionalDiagFramesPos = 0;
 bool sendingAdditionalDiagFrames = false;
 unsigned long lastSendingAdditionalDiagFrames = 0;
@@ -227,6 +228,7 @@ void receiveAdditionalDiagFrame(can_frame frame, bool encap) {
         Serial.print("/");
         Serial.println(receiveDiagFrameSize);
       }
+      receiveDiagFrameSize = 0;
       break;
     }
 
@@ -261,7 +263,7 @@ void receiveAdditionalDiagFrame(can_frame frame, bool encap) {
     }
 
     receiveDiagFrameData[receiveDiagFrameRead] = '\0';
-    receiveDiagDataPos = receiveDiagFrameRead = receiveDiagFrameAlreadyFlushed = 0;
+    receiveDiagDataPos = receiveDiagFrameRead = receiveDiagFrameAlreadyFlushed = receiveDiagFrameSize = 0;
 
     Serial.println(receiveDiagFrameData);
 
@@ -320,7 +322,7 @@ void sendAdditionalDiagFrames() {
           diagFrame.data[7] = tmpFrame[5];
 
           frameLen = frameLen + 2;
-          additionalFrameID = 0x00;
+          additionalFrameID++;
 
           diagFrame.can_id = CAN_EMIT_ID;
           diagFrame.can_dlc = frameLen;
@@ -371,7 +373,7 @@ void sendAdditionalDiagFrames() {
           diagFrame.data[7] = tmpFrame[6];
 
           frameLen = frameLen + 1;
-          additionalFrameID = 0x00;
+          additionalFrameID++;
 
           diagFrame.can_id = CAN_EMIT_ID;
           diagFrame.can_dlc = frameLen;
@@ -385,6 +387,7 @@ void sendAdditionalDiagFrames() {
         }
       }
     }
+    sendingAdditionalDiagFrames = false;
   }
   return;
 }
@@ -412,8 +415,8 @@ void sendDiagFrame(char * data, int frameFullLen, bool Raw) {
   if (LIN > 0 && !Raw) {
     if (frameLen > 6) { // Multi-frames
       diagFrame.data[0] = LIN;
-      diagFrame.data[1] = 0x10;
-      diagFrame.data[2] = (frameFullLen / 2);
+      diagFrame.data[1] = (0x10 + ((frameFullLen / 2) / 256));
+      diagFrame.data[2] = ((frameFullLen / 2) % 256);
       diagFrame.data[3] = tmpFrame[0];
       diagFrame.data[4] = tmpFrame[1];
       diagFrame.data[5] = tmpFrame[2];
@@ -440,8 +443,8 @@ void sendDiagFrame(char * data, int frameFullLen, bool Raw) {
     }
   } else {
     if (frameLen > 7 && !Raw) { // Multi-frames
-      diagFrame.data[0] = 0x10;
-      diagFrame.data[1] = (frameFullLen / 2);
+      diagFrame.data[0] = (0x10 + ((frameFullLen / 2) / 256));
+      diagFrame.data[1] = ((frameFullLen / 2) % 256);
       diagFrame.data[2] = tmpFrame[0];
       diagFrame.data[3] = tmpFrame[1];
       diagFrame.data[4] = tmpFrame[2];
@@ -604,6 +607,10 @@ void recvWithTimeout() {
       } else if (receiveDiagFrameData[0] == 'L') {
         LIN = strtoul(receiveDiagFrameData + 1, NULL, 16);
         Serial.println("OK");
+      } else if (receiveDiagFrameData[0] == 'W') {
+        customFrameSize = true;
+        receiveDiagFrameSize = strtoul(receiveDiagFrameData + 1, NULL, 10) * 2;
+        Serial.println("WOK");
       } else if (receiveDiagFrameData[0] == 'U') {
         LIN = 0;
         Serial.println("OK");
@@ -636,11 +643,13 @@ void recvWithTimeout() {
         snprintf(tmp, 4, "%02X", CAN_RECV_ID);
         Serial.println(tmp);
       } else if (receiveDiagFrameData[0] == '#' && receiveDiagFrameRead <= (16 + 1) && (receiveDiagFrameRead - 1) % 2 == 0) { // Send RAW frames
-        char tmpFrame[16];
-        for (int i = 1; i < receiveDiagFrameRead && i <= 16; i++) {
-          tmpFrame[i - 1] = receiveDiagFrameData[i];
-        }
-        sendDiagFrame(tmpFrame, receiveDiagFrameRead - 1, true);
+        sendDiagFrame(receiveDiagFrameData + 1, receiveDiagFrameRead - 1, true);
+
+        waitingReplySerialCMD = true;
+        lastCMDSent = millis();
+      } else if (receiveDiagFrameData[0] == '+') { // Large writing frame splitting
+        sendingAdditionalDiagFramesPos = 1;
+        sendingAdditionalDiagFrames = true;
 
         waitingReplySerialCMD = true;
         lastCMDSent = millis();
@@ -649,7 +658,13 @@ void recvWithTimeout() {
         for (int i = 0; i < receiveDiagFrameRead && i < 16; i++) {
           tmpFrame[i] = receiveDiagFrameData[i];
         }
-        sendDiagFrame(tmpFrame, receiveDiagFrameRead, false);
+        if (customFrameSize) { // Large writing frame splitting, recommended split size for continuous data = (receiveDiagFrameRead - 5) % 7 = 0 (ex: 250)
+          sendDiagFrame(tmpFrame, receiveDiagFrameSize, false);
+          receiveDiagFrameSize = 0;
+          customFrameSize = false;
+        } else {
+          sendDiagFrame(tmpFrame, receiveDiagFrameRead, false);
+        }
 
         waitingReplySerialCMD = true;
         lastCMDSent = millis();
@@ -707,7 +722,7 @@ void parseCAN() {
 
             waitingReplySerialCMD = false;
             lastCMDSent = 0;
-          } else if (len > 2 && canMsgRcvBuffer[t].data[0] >= 0x10 && canMsgRcvBuffer[t].data[0] <= 0x18) { // Acknowledgement Read
+          } else if (len > 2 && canMsgRcvBuffer[t].data[0] >= 0x10 && canMsgRcvBuffer[t].data[0] <= 0x19) { // Acknowledgement Read
             receiveDiagFrameSize = ((canMsgRcvBuffer[t].data[0] - 0x10) * 256) + canMsgRcvBuffer[t].data[1];
 
             if (waitingReplySerialCMD && LIN) {
@@ -764,7 +779,7 @@ void parseCAN() {
 
               waitingReplySerialCMD = false;
               lastCMDSent = 0;
-            } else if (len > 2 && canMsgRcvBuffer[t].data[0] >= 0x10 && canMsgRcvBuffer[t].data[0] <= 0x18) { // Acknowledgement Read
+            } else if (len > 2 && canMsgRcvBuffer[t].data[0] >= 0x10 && canMsgRcvBuffer[t].data[0] <= 0x19) { // Acknowledgement Read
               receiveDiagFrameSize = ((canMsgRcvBuffer[t].data[0] - 0x10) * 256) + canMsgRcvBuffer[t].data[1];
 
               if (waitingReplySerialCMD && LIN) {
