@@ -77,7 +77,7 @@ Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/m
 | 3103FF00 | Empty flash memory (Unit must be unlocked first) |
 | 3481110000 | Prepare flash writing for .cal upload (Unit must be unlocked first) |
 | 3482110000 | Prepare flash writing for .ulp upload (Unit must be unlocked first) |
-| 3482440008000000760000 | Prepare flash writing for .ulp upload via **DNx flasher** (Unit must be unlocked first) |
+| 348244XXXXXXXXXXYYYYYY | Prepare flash writing for .ulp upload in Full UDS mode (Unit must be unlocked first) - XXXXXXXXXX = Address, YYYYYY = Size |
 | 3101FF04 | Empty ZI Zone (Unit must be unlocked first) |
 | 3103FF04 | Empty ZI Zone (Unit must be unlocked first) |
 | 3483110000 | Prepare ZI zone writing (Unit must be unlocked first) |
@@ -142,7 +142,7 @@ Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/m
 | 6704 | Unlocked successfully for configuration - Unit will be locked again if no command is issued within 5 seconds |
 | 6EXXXX | Successfull Configuration Write of Zone XXXX |
 | 741000 | Download Writing ready |
-| 74200802 | Download Writing ready (**DNx flasher**) |
+| 74200802 | Download Writing ready in Full UDS mode |
 | 76XX02 | Download frame XX injected with success |
 | 76XX0A | Invalid checksum on download frame XX |
 
