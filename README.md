@@ -72,12 +72,12 @@ Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/m
 | 2704XXXXXXXX  | Unlocking response for configuration - XXXXXXXX = KEY - Must be given within 5 seconds after seed generation |
 | 22XXXX | Read Zone XXXX (2 bytes) |
 | 2EXXXXYYYYYYYYYYYY | Write Zone XXXX with data YYYYYYYYYYYY (Unit must be unlocked first) |
-| 3101FF0081F05A | Empty flash memory for .cal upload (Unit must be unlocked first) |
-| 3101FF0082F05A | Empty flash memory for .ulp upload (Unit must be unlocked first) - WARNING: If you don't upload a valid file your device will be temporarily bricked |
+| 3101FF0081F05A | Empty flash memory for .cal upload (Unit must be unlocked first) - F05A = Tool Signature |
+| 3101FF0082F05A | Empty flash memory for .ulp upload (Unit must be unlocked first) - F05A = Tool Signature - WARNING: If you don't upload a valid file your device will be temporarily bricked |
 | 3103FF00 | Empty flash memory (Unit must be unlocked first) |
 | 3481110000 | Prepare flash writing for .cal upload (Unit must be unlocked first) |
 | 3482110000 | Prepare flash writing for .ulp upload (Unit must be unlocked first) |
-| 348244XXXXXXXXXXYYYYYY | Prepare flash writing for .ulp upload in Full UDS mode (Unit must be unlocked first) - XXXXXXXXXX = Address, YYYYYY = Size |
+| 348244XXXXXXXXYYYYYYYY | Prepare flash writing for .ulp upload in Full UDS mode (Unit must be unlocked first) - XXXXXXXX = Block Address, YYYYYYYY = Block Size |
 | 3101FF04 | Empty ZI Zone (Unit must be unlocked first) |
 | 3103FF04 | Empty ZI Zone (Unit must be unlocked first) |
 | 3483110000 | Prepare ZI zone writing (Unit must be unlocked first) |
@@ -99,7 +99,7 @@ Check out [ECU_KEYS.md](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/m
 | 2784XXXXXXXX  | Unlocking response for configuration - XXXXXXXX = KEY - Must be given within 5 seconds after seed generation |
 | 21XX | Read Zone XX (1 byte) |
 | 3BXXYYYYYYYYYYYY | Write Zone XX with data YYYYYYYYYYYY (Unit must be unlocked first) |
-| 318181F05A | Empty flash memory for .cal upload (Unit must be unlocked first) |
+| 318181F05A | Empty flash memory for .cal upload (Unit must be unlocked first) - F05A = Tool Signature |
 | 318101 | Empty flash memory for .cal upload (Unit must be unlocked first) |
 | 348100000D07 | Prepare flash writing for .cal upload (Unit must be unlocked first) |
 
