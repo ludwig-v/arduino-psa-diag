@@ -338,7 +338,7 @@ Type of file : **Motorola S-record - https://en.wikipedia.org/wiki/SREC_(file_fo
 
 | TYPE | LENGTH | NOT_USED | FLASH_SIGNATURE | [UNLOCK_KEY](https://github.com/ludwig-v/psa-seedkey-algorithm/blob/main/ECU_KEYS.md) | [SUPPLIER](https://github.com/ludwig-v/arduino-psa-diag/blob/master/ECU_SUPPLIERS.md) | SYSTEM | APPLICATION | SOFTWARE_VERSION | SOFTWARE_EDITION | CAL_NUMBER | CHECKSUM2 |
 |--|--|--|--|--|--|--|--|--|--|--|--|
-| 1h | 1h | 2h | 2h | 1h | 1h | 1h | 1h | 1h | 2h | 3h | 1h |
+| 1h | 1h | 2h | 2h | 2h | 1h | 1h | 1h | 1h | 2h | 3h | 1h |
 
 #### S5 (Optional control frame - Number of frames in previous data block)
 
