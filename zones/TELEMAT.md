@@ -101,6 +101,11 @@
 | 012A | Calibration_Fct_VP1_HW |
 | 012B | Calibration_Fct_USB |
 | FFF1 | Calibration_Fct_COLOR_CORRECTION |
+| FFF2 | Calibration_Fct_[ECNR](https://www.nxp.com/company/about-nxp/nxps-new-automotive-echo-cancellation-noise-reduction-solution-makes-calls-clear:NW-NOISE-REDUCTION-SOLUTION) |
+| FFF3 | Calibration_Fct_SOUND_TUNING_DATA |
+| FFF4 | Calibration_Fct_ENGINE_SOUND_DATA |
+| FFF5 | Calibration_Fct_AUDIO_FUNCTIONAL_EQUALIZER |
+| FFF6 | Calibration_Fct_SOUND_EPICS_DATA |
 
 ## Zones (SMEG/AIO/MRN)
 
