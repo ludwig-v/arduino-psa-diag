@@ -720,9 +720,9 @@ void parseCAN() {
 
       diagFrame.data[0] = 0x8E;
       diagFrame.data[1] = 0x61;
-      diagFrame.data[2] = 0x01;
-      diagFrame.data[3] = 0x88;
-      diagFrame.data[4] = 0xAC;
+      diagFrame.data[2] = 0x00; // Odometer
+      diagFrame.data[3] = 0x01; // Odometer
+      diagFrame.data[4] = 0xA4; // Odometer = 42km
       diagFrame.data[5] = 0x7B;
       diagFrame.data[6] = 0x7B;
       diagFrame.data[7] = 0x20;
