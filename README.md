@@ -414,11 +414,22 @@ You can build yourself that kind of cable using an OBD2 Extender cable to use bo
 ![Dump cable](https://i.imgur.com/UVQRsyr.png)
 #### PINOUT
 
+##### AEE2004 / AEE2010
 | PIN | Description |
 |--|--|
 | 3 | CAN-BUS Diagnostic High |
 | 8 | CAN-BUS Diagnostic Low |
 
 ![OBD2 PINOUT](https://i.imgur.com/sWJF8gg.png)
+
+##### ⚠️ NEA2020
+*Original PINOUT is used for DoIP* (Diagnostic over IP)
+
+| PIN | Description |
+|--|--|
+| 6 | CAN-BUS Diagnostic High |
+| 14 | CAN-BUS Diagnostic Low |
+
+![OBD2 PINOUT](https://i.imgur.com/ADwFLJq.png)
 
 > Reminder: In Dump mode the termination resistor should not be activated

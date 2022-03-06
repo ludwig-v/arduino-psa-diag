@@ -7,6 +7,6 @@
 | FBFBFB | Technical Team |
 | FFFFFF | Virgin |
 
-## Signature for Secured Traceability (AEE2020)
+## Signature for Secured Traceability (NEA2020)
 
 The signature is **unique** to each diagnostic tool (in accordance with [Site](https://github.com/ludwig-v/arduino-psa-diag/blob/master/SITES.md)) due to EU regulations.
