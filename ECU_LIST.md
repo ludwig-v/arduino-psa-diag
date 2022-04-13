@@ -48,6 +48,7 @@
 | HCU1 | HCU1 | >6A7:687 |  |
 | DMTC | DMTC, DMTR, DMTR_DTC3B | >6BC:69C |  |
 | CSR | VCI | >6C8:628 | L48 |
+| CSR_2 | SWEB | >6C8:628 | L68 |
 | IDVR | IDVR | >763:663 |  |
 | AVM | AVP, AVM_KP1 | >74F:64F |  |
 | RUMBLE | VD46_RUMBLE | >708:728 |  |
@@ -197,7 +198,6 @@
 | PDSP | PLAT_SIEGE_DROITE | >750:650 |  |
 | CMB_BCCM | BCCM | >75F:65F |  |
 | VTH_LVDS_BD | VTH_UDS_2 | >738:718 |  |
-| CSR_2 | SWEB | >6C8:628 |  |
 | BAASL | BAASL | >732:712 |  |
 | IHM_CLIM_FMUX | FMUX | >77B:67B |  |
 | MDPLC_D | MDPLC_D | >756:656 |  |
