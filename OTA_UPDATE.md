@@ -18,6 +18,10 @@
 
 *Expected answer: 710106100200*
 
+| Command | Detail |
+|--|--|
+| 22 DB57 | OTA Current mode |
+
 ---
 
 ### IVI / BSRF Zones Description
