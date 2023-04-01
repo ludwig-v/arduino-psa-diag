@@ -62,6 +62,7 @@
 | 2131 | Telecoding_Fct_ANDROID |
 | 2132 | Telecoding_Fct_IDVR_HMI |
 | 2133 | Telecoding_Fct_WAVE3 |
+| 2134 | Telecoding_Fct_WAVE4 (Hybrid) |
 | 2145 | Telecoding_Fct_AIO |
 | 2901 | [Secured Traceability](https://github.com/ludwig-v/arduino-psa-diag#secured-traceability) |
 | 0100 | Calibration_Fct_AAS |
@@ -100,6 +101,7 @@
 | 0129 | Calibration_Fct_PPS2 |
 | 012A | Calibration_Fct_VP1_HW |
 | 012B | Calibration_Fct_USB |
+| 012C | Calibration_Fct_WAVE4 (Hybrid) |
 | FFF1 | Calibration_Fct_COLOR_CORRECTION |
 | FFF2 | Calibration_Fct_[ECNR](https://www.nxp.com/company/about-nxp/nxps-new-automotive-echo-cancellation-noise-reduction-solution-makes-calls-clear:NW-NOISE-REDUCTION-SOLUTION) |
 | FFF3 | Calibration_Fct_SOUND_TUNING_DATA |
