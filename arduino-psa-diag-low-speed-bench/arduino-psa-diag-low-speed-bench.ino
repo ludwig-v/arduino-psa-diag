@@ -1,6 +1,6 @@
 /*
-Copyright 2020-2022, Ludwig V. <https://github.com/ludwig-v>
-Date: 2022-01-10
+Copyright 2020-2025, Ludwig V. <https://github.com/ludwig-v>
+Date: 2025-06-07
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -31,9 +31,9 @@ all copies or substantial portions of the Software.
 //  Configuration  //
 /////////////////////
 
-#define SKETCH_VERSION "1.9"
+#define SKETCH_VERSION "2.0"
 #define CAN_RCV_BUFFER 40
-#define CAN_DEFAULT_DELAY 4 // Delay between multiframes
+#define CAN_DEFAULT_DELAY 5 // Delay between multiframes (ms)
 #define MAX_DATA_LENGTH 512
 #define CS_PIN_CAN0 10
 #define SERIAL_SPEED 115200
@@ -94,14 +94,18 @@ unsigned long lastKeepAliveReceived = 0;
 bool sendKeepAlives = false;
 byte sendKeepAliveType = 'U';
 
+unsigned long lastRoutineAnswerReceived = 0;
+bool sendRoutineChecks = false;
+byte sendRoutineCheckType = 'U';
+byte routineID[2];
+
 struct can_frame canMsgRcvBuffer[CAN_RCV_BUFFER];
 ThreadController controllerThread = ThreadController();
 Thread readCANThread = Thread();
-Thread sendKeepAlivesThread = Thread();
+Thread everySecondThread = Thread();
+Thread bsiEmulThread = Thread();
 Thread parseCANThread = Thread();
 Thread sendAdditionalDiagFramesThread = Thread();
-
-unsigned long lastBSIemul = 0;
 
 void setup() {
   Serial.begin(SERIAL_SPEED);
@@ -122,8 +126,11 @@ void setup() {
   readCANThread.onRun(readCAN);
   readCANThread.setInterval(0);
 
-  sendKeepAlivesThread.onRun(sendKeepAlive);
-  sendKeepAlivesThread.setInterval(1000);
+  everySecondThread.onRun(everySecond);
+  everySecondThread.setInterval(1000);
+
+  bsiEmulThread.onRun(bsiEmul);
+  bsiEmulThread.setInterval(50);
 
   parseCANThread.onRun(parseCAN);
   parseCANThread.setInterval(4);
@@ -132,7 +139,8 @@ void setup() {
   sendAdditionalDiagFramesThread.setInterval(1);
 
   controllerThread.add( & readCANThread);
-  controllerThread.add( & sendKeepAlivesThread);
+  controllerThread.add( & everySecondThread);
+  controllerThread.add( & bsiEmulThread);
   controllerThread.add( & parseCANThread);
   controllerThread.add( & sendAdditionalDiagFramesThread);
 }
@@ -414,6 +422,22 @@ void sendDiagFrame(char * data, int frameFullLen, bool Raw) {
     }
   }
 
+  if (tmpFrame[0] == 0x31) {
+    if (tmpFrame[1] == 0x01) { // Start Routine
+      sendRoutineChecks = true;
+      sendRoutineCheckType = 'U'; // UDS
+  
+      routineID[0] = tmpFrame[2];
+      routineID[1] = tmpFrame[3];
+    } else if (tmpFrame[1] != 0x03) {
+      sendRoutineChecks = true;
+      sendRoutineCheckType = 'K'; // KWP
+  
+      routineID[0] = tmpFrame[1];
+      routineID[1] = 0x01;
+    }
+  }
+
   if (LIN > 0 && !Raw) {
     if (frameLen > 6) { // Multi-frames
       diagFrame.data[0] = LIN;
@@ -494,7 +518,7 @@ void sendDiagFrame(char * data, int frameFullLen, bool Raw) {
   return;
 }
 
-void sendKeepAlive() {
+void everySecond() {
   struct can_frame diagFrame;
 
   if (sendKeepAlives) {
@@ -530,6 +554,29 @@ void sendKeepAlive() {
         diagFrame.can_id = CAN_EMIT_ID;
         diagFrame.can_dlc = 3;
       }
+    }
+
+    CAN0.sendMessage( & diagFrame);
+  }
+
+  if (sendRoutineChecks) {
+    if (sendRoutineCheckType == 'K') { // KWP
+      diagFrame.data[0] = 0x03;
+      diagFrame.data[1] = 0x31;
+      diagFrame.data[3] = routineID[0];
+      diagFrame.data[4] = 0x01;
+
+      diagFrame.can_id = CAN_EMIT_ID;
+      diagFrame.can_dlc = 4;
+    } else { // UDS
+      diagFrame.data[0] = 0x04;
+      diagFrame.data[1] = 0x31;
+      diagFrame.data[2] = 0x03;
+      diagFrame.data[3] = routineID[0];
+      diagFrame.data[4] = routineID[1];
+
+      diagFrame.can_id = CAN_EMIT_ID;
+      diagFrame.can_dlc = 5;
     }
 
     CAN0.sendMessage( & diagFrame);
@@ -690,48 +737,46 @@ void loop() {
   }
 }
 
+void bsiEmul() { // Minimal frames required to power up a telematic unit
+  struct can_frame diagFrame;
+
+  diagFrame.data[0] = 0x80;
+  diagFrame.data[1] = 0x00;
+  diagFrame.data[2] = 0x02;
+  diagFrame.data[3] = 0x00;
+  diagFrame.data[4] = 0x00;
+  diagFrame.can_id = 0x18;
+  diagFrame.can_dlc = 5;
+  CAN0.sendMessage( & diagFrame); // Original delay : 1000ms
+
+  diagFrame.data[0] = 0x0E;
+  diagFrame.data[1] = 0x00;
+  diagFrame.data[2] = 0x03;
+  diagFrame.data[3] = 0x2A;
+  diagFrame.data[4] = 0x31;
+  diagFrame.data[5] = 0x00;
+  diagFrame.data[6] = 0x81;
+  diagFrame.data[7] = 0xAC;
+  diagFrame.can_id = 0x36;
+  diagFrame.can_dlc = 8;
+  CAN0.sendMessage( & diagFrame); // Original delay : 100ms
+
+  diagFrame.data[0] = 0x8E; // Engine running / Engine not running: 0x88
+  diagFrame.data[1] = 0x61;
+  diagFrame.data[2] = 0x00; // Odometer
+  diagFrame.data[3] = 0x01; // Odometer
+  diagFrame.data[4] = 0xA4; // Odometer = 42km
+  diagFrame.data[5] = 0x7B;
+  diagFrame.data[6] = 0x7B;
+  diagFrame.data[7] = 0x20;
+  diagFrame.can_id = 0xF6;
+  diagFrame.can_dlc = 8;
+  CAN0.sendMessage( & diagFrame); // Original delay : 50ms
+}
+
 void parseCAN() {
   if (!Lock && !parsingCAN && !sendingAdditionalDiagFrames) {
     parsingCAN = true;
-
-    if (millis() - lastBSIemul >= 100) { // Every 100ms, minimal frames required to power up a telematic unit
-      struct can_frame diagFrame;
-
-      diagFrame.data[0] = 0x80;
-      diagFrame.data[1] = 0x00;
-      diagFrame.data[2] = 0x02;
-      diagFrame.data[3] = 0x00;
-      diagFrame.data[4] = 0x00;
-      diagFrame.can_id = 0x18;
-      diagFrame.can_dlc = 5;
-      CAN0.sendMessage( & diagFrame); // Original delay : 1000ms
-
-      diagFrame.data[0] = 0x0E;
-      diagFrame.data[1] = 0x00;
-      diagFrame.data[2] = 0x03;
-      diagFrame.data[3] = 0x2A;
-      diagFrame.data[4] = 0x31;
-      diagFrame.data[5] = 0x00;
-      diagFrame.data[6] = 0x81;
-      diagFrame.data[7] = 0xAC;
-      diagFrame.can_id = 0x36;
-      diagFrame.can_dlc = 8;
-      CAN0.sendMessage( & diagFrame); // Original delay : 100ms
-
-      diagFrame.data[0] = 0x8E;
-      diagFrame.data[1] = 0x61;
-      diagFrame.data[2] = 0x00; // Odometer
-      diagFrame.data[3] = 0x01; // Odometer
-      diagFrame.data[4] = 0xA4; // Odometer = 42km
-      diagFrame.data[5] = 0x7B;
-      diagFrame.data[6] = 0x7B;
-      diagFrame.data[7] = 0x20;
-      diagFrame.can_id = 0xF6;
-      diagFrame.can_dlc = 8;
-      CAN0.sendMessage( & diagFrame); // Original delay : 50ms
-
-      lastBSIemul = millis();
-    }
 
     for (int t = 0; t < CAN_RCV_BUFFER; t++) {
       if (canMsgRcvBuffer[t].can_id > 0) {
@@ -747,6 +792,22 @@ void parseCAN() {
         }
 
         int len = canMsgRcvBuffer[t].can_dlc;
+
+        if (sendRoutineChecks) {
+          if (canMsgRcvBuffer[t].data[0] < 0x10 && canMsgRcvBuffer[t].data[1] == 0x71) { // Routine Reply
+            lastRoutineAnswerReceived = millis();
+
+            if (len >= 6) { // UDS
+              if (canMsgRcvBuffer[t].data[5] != 0x01) { // Routine not running state
+                sendRoutineChecks = false;
+              }
+            } else if (len <= 4) { // KWP
+               if (canMsgRcvBuffer[t].data[3] != 0x01) { // Routine not running state
+                sendRoutineChecks = false;
+              }
+            }
+          }
+        }
 
         if (canMsgRcvBuffer[t].data[0] < 0x10 && canMsgRcvBuffer[t].data[1] == 0x7E) {
           lastKeepAliveReceived = millis();
@@ -798,7 +859,7 @@ void parseCAN() {
           } else if (len == 3 && canMsgRcvBuffer[t].data[0] == 0x30 && canMsgRcvBuffer[t].data[1] == 0x00) {
             // Ignore in dump mode
             framesDelay = canMsgRcvBuffer[t].data[2];
-          } else {
+          } else if (id != 0x353) { // Ignore 0x353 blank frame from some BSI
             snprintf(tmp, 4, "%02X", id);
             Serial.print(tmp);
             Serial.print(":");
@@ -886,10 +947,16 @@ void parseCAN() {
           lastCMDSent = millis();
         }
 
-        if (sendKeepAlives && lastKeepAliveReceived > 0 && millis() - lastKeepAliveReceived >= 1000) { // ECU connection lost, no answer
-          Serial.println("7F3E03"); // Custom error
-
-          sendKeepAlives = false; // Stop sending Keep-Alives
+        if (sendRoutineChecks) {
+          if (lastRoutineAnswerReceived > 0 && millis() - lastRoutineAnswerReceived >= 4000) { // ECU connection lost, no answer
+            sendRoutineChecks = false; // Stop sending Routine Checks
+          }
+        } else if (sendKeepAlives) {
+          if (lastKeepAliveReceived > 0 && millis() - lastKeepAliveReceived >= 4000) { // ECU connection lost, no answer
+            Serial.println("7F3E03"); // Custom error
+  
+            sendKeepAlives = false; // Stop sending Keep-Alives
+          }
         }
 
         if (waitingUnlock && canMsgRcvBuffer[t].data[0] < 0x10 && canMsgRcvBuffer[t].data[1] == 0x67 && canMsgRcvBuffer[t].data[2] == UnlockService) {
